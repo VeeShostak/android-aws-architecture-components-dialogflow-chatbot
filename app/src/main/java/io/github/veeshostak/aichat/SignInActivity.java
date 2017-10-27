@@ -106,7 +106,7 @@ public class SignInActivity extends AppCompatActivity implements View.OnClickLis
 
                 user.setFullName(fullName);
                 user.setEmail(email);
-                user.setConversationIds(new HashSet<String>());
+                //user.setConversationIds(new HashSet<String>());
 
                 mapper.save(user);
 
@@ -167,7 +167,6 @@ public class SignInActivity extends AppCompatActivity implements View.OnClickLis
 
             // get id (either retrieve existing, or create)
             Installation GetId = new Installation();
-            uniqueId = "";
             uniqueId = GetId.id(getApplicationContext());
 
 
