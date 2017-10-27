@@ -82,7 +82,9 @@ public class SignInActivity extends AppCompatActivity implements View.OnClickLis
         mTermOfServiceLink = (TextView) findViewById(R.id.termsLink);
         mSignUpButton = (Button) findViewById(R.id.signUpButton);
 
+        // listeners
         mSignUpButton.setOnClickListener(this);
+        mTermOfServiceLink.setOnClickListener(this);
 
         DynamoDBClientAndMapper dynamoDb = new DynamoDBClientAndMapper(getApplicationContext());
         mapper = dynamoDb.getMapper();
@@ -176,6 +178,9 @@ public class SignInActivity extends AppCompatActivity implements View.OnClickLis
             // Go to MainActivity
             startActivity(new Intent(SignInActivity.this, MainActivity.class));
             finish(); // exit, remove current activity
+
+        } else if (i == R.id.termsLink) {
+            startActivity(new Intent(SignInActivity.this, TermsOfService.class));
         }
 
     }
