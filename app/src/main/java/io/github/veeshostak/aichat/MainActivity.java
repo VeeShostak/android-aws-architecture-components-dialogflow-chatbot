@@ -1,5 +1,6 @@
 package io.github.veeshostak.aichat;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
@@ -137,7 +138,7 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_chat, menu);
+        getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
@@ -149,7 +150,8 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
         int id = item.getItemId();
 
 
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_terms) {
+            startActivity(new Intent(MainActivity.this, TermsOfService.class));
             return true;
         }
 
