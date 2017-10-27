@@ -30,14 +30,13 @@ public class User {
 
     public void setUserId(String userId) { this.userId = userId; }
 
+    // =====
 
-    @DynamoDBRangeKey(attributeName="SignUpDateTime")
+    @DynamoDBAttribute(attributeName="SignUpDateTime")
     public String getSignUpDateTime() { return signUpDateTime; }
 
     public void setSignUpDateTime(String signUpDateTime) { this.signUpDateTime = signUpDateTime; }
 
-
-    // =====
 
     @DynamoDBAttribute(attributeName = "ConversationIds")
     public HashSet<String> getConversationIds() {

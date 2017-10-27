@@ -33,7 +33,7 @@ public class UserConversation {
     @DynamoDBRangeKey(attributeName="ConversationDateTime")
     public String getConversationDateTime() { return conversationDateTime; }
 
-    public void setConversationDateTime(String conversationDate) { this.conversationDateTime = conversationDateTime; }
+    public void setConversationDateTime(String conversationDateTime) { this.conversationDateTime = conversationDateTime; }
 
 
     // =====

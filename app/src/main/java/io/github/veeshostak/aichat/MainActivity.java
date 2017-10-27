@@ -85,7 +85,7 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
 
-        final AIConfiguration config = new AIConfiguration("da41a1f4c05849b9afe59093d3599aab",
+        final AIConfiguration config = new AIConfiguration("16ef009735374933b80a27d199edc8de",
                 AIConfiguration.SupportedLanguages.English,
                 AIConfiguration.RecognitionEngine.System);
 
@@ -113,14 +113,17 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
         machineName.setText("Fiona");
         machineName.setTextColor(Color.BLACK);
 
-        // TODO: REMOVE
-        //RelativeLayout container = (RelativeLayout) findViewById(R.id.container);
+
 
         // retrieve ID from signInActivity
-        Bundle extras = getIntent().getExtras();
-        if (extras != null) {
-            uniqueId = extras.getString("UNIQUE_ID");
-        }
+//        Bundle extras = getIntent().getExtras();
+//        if (extras != null) {
+//            uniqueId = extras.getString("UNIQUE_ID");
+//        }
+
+        // retrieve ID from file
+        Installation GetId = new Installation();
+        uniqueId = GetId.id(getApplicationContext());
 
         DynamoDBClientAndMapper dynamoDb = new DynamoDBClientAndMapper(getApplicationContext());
         mapper = dynamoDb.getMapper();
@@ -153,7 +156,7 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
         return super.onOptionsItemSelected(item);
     }
 
-    private void addConversationtoDb() {
+    private void addConversationToDb() {
         final AsyncTask<String, Void, Void> taskUpdateDb = new AsyncTask<String, Void, Void>() {
 
 
@@ -182,18 +185,21 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
                 HashSet<String> conversationIds; // to obtain stored conversations ids
                 User selectedUser = mapper.load(User.class, uniqueId);
 
-                // get existing conversations ids
-                conversationIds = new HashSet<String>(selectedUser.getConversationIds());
+                // get existing conversations ids, if they exist
+                if (selectedUser.getConversationIds() != null) {
+                    conversationIds = new HashSet<String>(selectedUser.getConversationIds());
+                } else {
+                    conversationIds = new HashSet<String>();
+                }
                 // add new conversation id
                 conversationIds.add(conversationId);
+
+                selectedUser.setConversationIds(conversationIds);
 
                 // = END add conversation Id to User Table
 
                 mapper.save(selectedUser);
                 mapper.save(conversation);
-
-
-
 
                 return null;
 
@@ -202,6 +208,10 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
 
             @Override
             protected void onPostExecute(Void hi) {
+
+                // clear history
+                chatHistoryForDb.clear();
+
                 if (hi != null) {
                     //onResult(response);
                     String test = "success";
@@ -395,8 +405,8 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
                 final Result result = response.getResult();
                 final String speech = result.getFulfillment().getSpeech();
 
-                Log.i(TAG, "Speech: " + speech);
-                Toast.makeText(getApplicationContext(),"Speech:" + speech , Toast.LENGTH_LONG).show();
+                //Log.i(TAG, "Speech: " + speech);
+                //Toast.makeText(getApplicationContext(),"Speech:" + speech , Toast.LENGTH_LONG).show();
 
                 ChatMessage chatMessage = new ChatMessage();
                 chatMessage.setId(122);//dummy
@@ -409,7 +419,7 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
 
                 chatHistoryForDb.add(machine+speech);
 
-
+                addConversationToDb();
 
             }
 
@@ -437,7 +447,7 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
         //  determine whether the activity is simply pausing or completely finishing.
         if (isFinishing()) {
             // save conversation to the db
-            addConversationtoDb();
+            addConversationToDb();
         }
 
 
