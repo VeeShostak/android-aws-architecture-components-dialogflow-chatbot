@@ -68,6 +68,8 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
     private final int REQUEST_INTERNET = 1;
 
     public static final String DB_CHAT_HISTORY = "dbChatHistory";
+    public static final String LOCAL_CHAT_HISTORY = "localChatHistory";
+
 
     private String uniqueId;
 
@@ -93,6 +95,7 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
     String machine = "m:";
 
     SharedPreferences dbSharedPref;
+    SharedPreferences chatHistorySharedPref;
 
 
 
@@ -123,8 +126,12 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
         chatHistory = new ArrayList<ChatMessage>();
         chatHistoryForDb = new ArrayList<String>();
 
+
         messagesContainer = (ListView) findViewById(R.id.messagesContainer);
         userMessage = (EditText) findViewById(R.id.userMessageField);
+
+        adapter = new ChatAdapter(MainActivity.this, new ArrayList<ChatMessage>());
+        messagesContainer.setAdapter(adapter);
 
         sendBtn = (Button) findViewById(R.id.sendMessageButton);
         sendBtn.setOnClickListener(this);
@@ -132,8 +139,6 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
         TextView machineName = (TextView) findViewById(R.id.machineName);
         machineName.setText("Fiona");
         machineName.setTextColor(Color.BLACK);
-
-
 
         // retrieve ID from signInActivity
 //        Bundle extras = getIntent().getExtras();
@@ -147,9 +152,6 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
 
         DynamoDBClientAndMapper dynamoDb = new DynamoDBClientAndMapper(getApplicationContext());
         mapper = dynamoDb.getMapper();
-
-        // randomly select a welcome message
-        selectWelcomeChatMessage();
 
 
         // shared prefs for DB and for chat history
@@ -169,30 +171,92 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
         // and clear shared prefs on success
 
 
-
+        // TODO: use SQLite instead of shared prefs
+        // =====
+        // START shard prefs
         Context context = this;
         dbSharedPref = context.getSharedPreferences(DB_CHAT_HISTORY, Context.MODE_PRIVATE);
+        chatHistorySharedPref = context.getSharedPreferences(LOCAL_CHAT_HISTORY, Context.MODE_PRIVATE);
 
 
-        // TODO: use SQLite instead of shared prefs
+
         // NOTE: need to gurantee strings (user messages, ai responses) do not contain ;-`;
 
+        // get the last conversation
+        // from sharedPrefs and push to the db.
+        // reset shared prefs file
+
         String serialized = dbSharedPref.getString("conversation", null);
-
-
         if (serialized != null) {
 
             List<String> storedDbChatHistory = Arrays.asList(TextUtils.split(serialized, ";-`;"));
 
             chatHistoryForDb = new ArrayList<String>(storedDbChatHistory);
 
-            if(chatHistoryForDb.size() > 0) {
+            if (chatHistoryForDb.size() > 0) {
                 // update db with stored chat history
                 // reset db prefs
                 addConversationToDb();
             }
+        } else {
+
+            // START display chatHistorySharedPref conversation
+
+            String serializedLocalHist = chatHistorySharedPref.getString("conversation", null);
+            ArrayList<String> tempLocalHistory;
+
+            if (serializedLocalHist != null) {
+                // if past convo exists, get it
+                List<String> storedDbChatHistory = Arrays.asList(TextUtils.split(serializedLocalHist, ";-`;"));
+
+                if (storedDbChatHistory.size() > 0) {
+                    tempLocalHistory = new ArrayList<String>(storedDbChatHistory);
+                } else {
+                    tempLocalHistory = new ArrayList<String>();
+                }
+
+
+
+
+            } else {
+                // if past convo does not exists, initialize
+                tempLocalHistory = new ArrayList<String>();
+
+            }
+
+            // display persisted conversation to the user
+            if (tempLocalHistory.size() > 0) {
+                for (String i : tempLocalHistory) {
+                    ChatMessage tempMsg = new ChatMessage();
+                    tempMsg.setId(2);
+
+                    // length of i guranteed to be at least 2 (u: or m:)
+                    if (i.charAt(0) == 'u') {
+                        tempMsg.setMe(true);
+                    } else {
+                        tempMsg.setMe(false);
+                    }
+                    tempMsg.setMessage(i.substring(i.indexOf(':') + 1));
+                    tempMsg.setDate(DateFormat.getDateTimeInstance().format(new Date()));
+
+                    displayMessage(tempMsg);
+                }
+            }
+            // END display chatHistorySharedPref conversation
 
         }
+
+
+        // =====
+        // END shared prefs
+
+
+
+
+
+        // randomly select a welcome message
+        //selectWelcomeChatMessage();
+
 
     }
 
@@ -226,8 +290,6 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
 
             @Override
             protected Void doInBackground(final String... params) {
-
-
 
                 String conversationDateTime = String.valueOf(System.currentTimeMillis() / 100); // get seconds
 
@@ -273,13 +335,61 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
             @Override
             protected void onPostExecute(Void hi) {
 
+                // Persistence maintain by: Before delete db shared prefs, add on chat history prefs
+
+                // get past stored conversation
+                // to it, add on this conversation
+                String serializedLocalHist = chatHistorySharedPref.getString("conversation", null);
+
+                ArrayList<String> tempLocalHistory;
+                if (serializedLocalHist != null) {
+                    // if past convo exists, get it
+                    List<String> storedDbChatHistory = Arrays.asList(TextUtils.split(serializedLocalHist, ";-`;"));
+                    tempLocalHistory = new ArrayList<String>(storedDbChatHistory);
+
+                    // to it, add on this conversation
+                    tempLocalHistory.addAll(chatHistoryForDb);
+
+                } else {
+                    // if past convo does not exists,
+                    // initialize and add this conversation
+                    tempLocalHistory = new ArrayList<String>();
+                    tempLocalHistory.addAll(chatHistoryForDb);
+                }
+
+                // save the conversation to persist
+                // (before clearing dbChatHistory, copy it to chatHistoryPrefs)
+                SharedPreferences.Editor editorLocalHist = chatHistorySharedPref.edit();
+                editorLocalHist.putString("conversation", TextUtils.join(";-`;", tempLocalHistory));
+                editorLocalHist.commit();
+
+                // display persisted conversation to the user
+                for (String i:tempLocalHistory ) {
+                    ChatMessage tempMsg = new ChatMessage();
+                    tempMsg.setId(2);
+
+                    // length of i guranteed to be at least 2 (u: or m:)
+                    if(i.charAt(0) == 'u') {
+                        tempMsg.setMe(true);
+                    } else {
+                        tempMsg.setMe(false);
+                    }
+                    tempMsg.setMessage(i);
+                    tempMsg.setDate(DateFormat.getDateTimeInstance().format(new Date()));
+
+                    displayMessage(tempMsg);
+                }
+
+
+
                 // clear history
                 chatHistoryForDb.clear();
 
+
                 // clear db prefs
-                SharedPreferences.Editor editor = dbSharedPref.edit();
-                editor.remove("conversation");
-                editor.apply();
+                SharedPreferences.Editor editorDbHist = dbSharedPref.edit();
+                editorDbHist.remove("conversation");
+                editorDbHist.apply();
 
                 if (hi != null) {
                     //onResult(response);
@@ -367,8 +477,7 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
         msg5.setDate(DateFormat.getDateTimeInstance().format(minBack2));
         chatHistory.add(msg5);
 
-        adapter = new ChatAdapter(MainActivity.this, new ArrayList<ChatMessage>());
-        messagesContainer.setAdapter(adapter);
+
 
         for(int i=0; i<chatHistory.size(); i++) {
             ChatMessage message = chatHistory.get(i);
@@ -483,6 +592,7 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
                 displayMessage(chatMessage);
 
                 chatHistoryForDb.add(machine+speech);
+
                 // add to shared prefs
                 SharedPreferences.Editor editor = dbSharedPref.edit();
                 editor.putString("conversation", TextUtils.join(";-`;", chatHistoryForDb));
@@ -541,13 +651,13 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
             chatMessage.setDate(DateFormat.getDateTimeInstance().format(new Date()));
             chatMessage.setMe(true);
 
-            userMessage.setText(""); // clear
+            userMessage.setText(""); // clear message field
             displayMessage(chatMessage);
 
             chatHistoryForDb.add(user+messageText);
             // add to shared prefs
             SharedPreferences.Editor editor = dbSharedPref.edit();
-            editor.putString("conversation", TextUtils.join(":", chatHistoryForDb));
+            editor.putString("conversation", TextUtils.join(";-`;", chatHistoryForDb));
             editor.commit();
 
             sendRequest(messageText);
