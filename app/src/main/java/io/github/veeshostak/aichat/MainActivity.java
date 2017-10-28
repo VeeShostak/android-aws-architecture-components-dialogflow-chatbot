@@ -1,6 +1,8 @@
 package io.github.veeshostak.aichat;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.AsyncTask;
 import android.support.v7.app.AppCompatActivity;
@@ -25,6 +27,12 @@ import io.github.veeshostak.aichat.Models.UserConversation;
 // end api.ai imports
 
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashSet;
@@ -45,6 +53,7 @@ import android.widget.Toast;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Locale;
 import java.util.UUID;
 
 
@@ -57,6 +66,8 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
 
     private static final String TAG = "ChatActivity";
     private final int REQUEST_INTERNET = 1;
+
+    public static final String DB_CHAT_HISTORY = "dbChatHistory";
 
     private String uniqueId;
 
@@ -81,6 +92,10 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
     String user = "u:";
     String machine = "m:";
 
+    SharedPreferences dbSharedPref;
+
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -104,6 +119,10 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
     }
 
     private void initControls() {
+
+        chatHistory = new ArrayList<ChatMessage>();
+        chatHistoryForDb = new ArrayList<String>();
+
         messagesContainer = (ListView) findViewById(R.id.messagesContainer);
         userMessage = (EditText) findViewById(R.id.userMessageField);
 
@@ -133,7 +152,50 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
         selectWelcomeChatMessage();
 
 
+        // shared prefs for DB and for chat history
+
+        // shared prefs for db:
+        // user, has conersation, exits app (convo saved to shared prefs).
+        // starts app again-> get the last conversation
+        // from sharedPrefs and push to the db.
+        // reset shared prefs file
+
+        // shared prefs for chat history:
+        // maintain persistence until user clears conversation
+        // maintain by: Before delete db shared prefs, copy to chat history prefs
+
+
+        // open db shared prefs. see if data exists. if exists push it back to db,
+        // and clear shared prefs on success
+
+
+
+        Context context = this;
+        dbSharedPref = context.getSharedPreferences(DB_CHAT_HISTORY, Context.MODE_PRIVATE);
+
+
+        // TODO: use SQLite instead of shared prefs
+        // NOTE: need to gurantee strings (user messages, ai responses) do not contain ;-`;
+
+        String serialized = dbSharedPref.getString("conversation", null);
+
+
+        if (serialized != null) {
+
+            List<String> storedDbChatHistory = Arrays.asList(TextUtils.split(serialized, ";-`;"));
+
+            chatHistoryForDb = new ArrayList<String>(storedDbChatHistory);
+
+            if(chatHistoryForDb.size() > 0) {
+                // update db with stored chat history
+                // reset db prefs
+                addConversationToDb();
+            }
+
+        }
+
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -214,6 +276,11 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
                 // clear history
                 chatHistoryForDb.clear();
 
+                // clear db prefs
+                SharedPreferences.Editor editor = dbSharedPref.edit();
+                editor.remove("conversation");
+                editor.apply();
+
                 if (hi != null) {
                     //onResult(response);
                     String test = "success";
@@ -239,10 +306,6 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
     }
 
     private void selectWelcomeChatMessage(){
-
-
-        chatHistory = new ArrayList<ChatMessage>();
-        chatHistoryForDb = new ArrayList<String>();
 
         int unicode = 0x1F60A;
         String smile = new String(Character.toChars(unicode));
@@ -420,8 +483,12 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
                 displayMessage(chatMessage);
 
                 chatHistoryForDb.add(machine+speech);
+                // add to shared prefs
+                SharedPreferences.Editor editor = dbSharedPref.edit();
+                editor.putString("conversation", TextUtils.join(";-`;", chatHistoryForDb));
+                editor.commit();
 
-                addConversationToDb();
+                //addConversationToDb();
 
             }
 
@@ -437,25 +504,22 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
         //resultTextView.setText(error.toString());
     }
 
-    @Override
-    public void onPause() {
-        super.onPause();
-
-        // use onPause because:
-        // onStop may not always be called in low-memory situations,
-        // as well as onDestroy, such as when Android is starved for
-        // resources and cannot properly background the Activity.
-
-        //  determine whether the activity is simply pausing or completely finishing.
-        if (isFinishing()) {
-            // save conversation to the db
-            addConversationToDb();
-        }
-
-
-
-
-    }
+//    @Override
+//    public void onPause() {
+//        super.onPause();
+//
+//        // use onPause because:
+//        // onStop may not always be called in low-memory situations,
+//        // as well as onDestroy, such as when Android is starved for
+//        // resources and cannot properly background the Activity.
+//
+//        //  determine whether the activity is simply pausing or completely finishing.
+//        if (isFinishing()) {
+//            // save conversation to the db
+//            addConversationToDb();
+//        }
+//
+//    }
 
 
 
@@ -481,6 +545,10 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
             displayMessage(chatMessage);
 
             chatHistoryForDb.add(user+messageText);
+            // add to shared prefs
+            SharedPreferences.Editor editor = dbSharedPref.edit();
+            editor.putString("conversation", TextUtils.join(":", chatHistoryForDb));
+            editor.commit();
 
             sendRequest(messageText);
 
