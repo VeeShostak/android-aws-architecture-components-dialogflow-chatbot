@@ -94,8 +94,10 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
     String user = "u:";
     String machine = "m:";
 
-    SharedPreferences dbSharedPref;
-    SharedPreferences chatHistorySharedPref;
+    private SharedPreferences dbSharedPref;
+    private SharedPreferences chatHistorySharedPref;
+
+    private boolean clearChatSelected;
 
 
 
@@ -122,6 +124,8 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
     }
 
     private void initControls() {
+
+        clearChatSelected = false;
 
         chatHistory = new ArrayList<ChatMessage>();
         chatHistoryForDb = new ArrayList<String>();
@@ -180,14 +184,16 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
 
 
 
-        // NOTE: need to gurantee strings (user messages, ai responses) do not contain ;-`;
+        // NOTE: need to guarantee strings (user messages, ai responses) do not contain ;-`;
 
         // get the last conversation
         // from sharedPrefs and push to the db.
         // reset shared prefs file
 
         String serialized = dbSharedPref.getString("conversation", null);
+
         if (serialized != null) {
+            // START The user had a new conversation last time, push to db
 
             List<String> storedDbChatHistory = Arrays.asList(TextUtils.split(serialized, ";-`;"));
 
@@ -198,6 +204,7 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
                 // reset db prefs
                 addConversationToDb();
             }
+            // END The user had a new conversation last time, push to db
         } else {
 
             // START display chatHistorySharedPref conversation
@@ -258,30 +265,6 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
 
     }
 
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-
-        if (id == R.id.action_terms) {
-            startActivity(new Intent(MainActivity.this, TermsOfService.class));
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
     private void addConversationToDb() {
         final AsyncTask<String, Void, Void> taskUpdateDb = new AsyncTask<String, Void, Void>() {
 
@@ -333,10 +316,14 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
             @Override
             protected void onPostExecute(Void hi) {
 
-                // Persistence maintain by: Before delete db shared prefs, add on chat history prefs
+                // maintain persistence by: Before deleting dbSharedPrefs, add the data to chatHistory prefs
 
+                // =====
+                // START
                 // get past stored conversation
-                // to it, add on this conversation
+                // to it, add on this conversation, then delete dbArray and dbSharedPrefs
+                // =====
+
                 String serializedLocalHist = chatHistorySharedPref.getString("conversation", null);
 
                 ArrayList<String> tempLocalHistory;
@@ -355,37 +342,54 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
                     tempLocalHistory.addAll(chatHistoryForDb);
                 }
 
-                // save the conversation to persist
-                // (before clearing dbChatHistory, copy it to chatHistoryPrefs)
-                SharedPreferences.Editor editorLocalHist = chatHistorySharedPref.edit();
-                editorLocalHist.putString("conversation", TextUtils.join(";-`;", tempLocalHistory));
-                editorLocalHist.commit();
+                // if clear conversation menu button is pressed, do not save, but clear
+                if (clearChatSelected) {
+                    // clear
+                    SharedPreferences.Editor editorLocalHist = chatHistorySharedPref.edit();
+                    editorLocalHist.remove("conversation");
+                    editorLocalHist.apply();
 
-                // display persisted conversation to the user
-                for (String i:tempLocalHistory ) {
-                    ChatMessage tempMsg = new ChatMessage();
+                    adapter.clearMessages();
+                    adapter.notifyDataSetChanged();
 
-                    // length of i guranteed to be at least 2 (u: or m:)
-                    if(i.charAt(0) == 'u') {
-                        tempMsg.setMe(true);
-                    } else {
-                        tempMsg.setMe(false);
+                    clearChatSelected = false;
+
+                } else {
+                    // save the conversation to persist
+                    // (before clearing dbChatHistory, copy it to chatHistoryPrefs)
+                    SharedPreferences.Editor editorLocalHist = chatHistorySharedPref.edit();
+                    editorLocalHist.putString("conversation", TextUtils.join(";-`;", tempLocalHistory));
+                    editorLocalHist.apply();
+
+                    // display persisted conversation to the user
+                    for (String i:tempLocalHistory ) {
+                        ChatMessage tempMsg = new ChatMessage();
+
+                        // length of i guranteed to be at least 2 (u: or m:)
+                        if(i.charAt(0) == 'u') {
+                            tempMsg.setMe(true);
+                        } else {
+                            tempMsg.setMe(false);
+                        }
+                        tempMsg.setMessage(i.substring(i.indexOf(':') + 1));
+
+                        displayMessage(tempMsg);
                     }
-                    tempMsg.setMessage(i.substring(i.indexOf(':') + 1));
 
-                    displayMessage(tempMsg);
                 }
-
-
 
                 // clear history
                 chatHistoryForDb.clear();
-
-
                 // clear db prefs
                 SharedPreferences.Editor editorDbHist = dbSharedPref.edit();
                 editorDbHist.remove("conversation");
                 editorDbHist.apply();
+
+                // =====
+                // END
+                // get past stored conversation
+                // to it, add on this conversation, then delete dbArray and dbSharedPrefs
+                // =====
 
                 if (hi != null) {
                     //onResult(response);
@@ -539,7 +543,7 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
                 // add to shared prefs
                 SharedPreferences.Editor editor = dbSharedPref.edit();
                 editor.putString("conversation", TextUtils.join(";-`;", chatHistoryForDb));
-                editor.commit();
+                editor.apply();
 
                 //addConversationToDb();
 
@@ -575,6 +579,74 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
 //    }
 
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_chat, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+
+        if (id == R.id.action_terms) {
+            startActivity(new Intent(MainActivity.this, TermsOfService.class));
+            return true;
+        } else if (id == R.id.action_delete_chat) {
+
+            // if there is data in dbSharedPref there is a conversation has not been
+            // pushed back to the server, push it to the server and delete
+            // dbPrefs and chatHistoryPrefs
+
+            String serialized = dbSharedPref.getString("conversation", null);
+
+            if (serialized != null) {
+                // START The user had a new conversation last time, push to db
+
+                List<String> storedDbChatHistory = Arrays.asList(TextUtils.split(serialized, ";-`;"));
+
+                chatHistoryForDb = new ArrayList<String>(storedDbChatHistory);
+
+                if (chatHistoryForDb.size() > 0) {
+
+
+                    //push untracked conversation to the server and delete
+                    // dbPrefs and chatHistoryPrefs
+                    clearChatSelected = true;
+                    addConversationToDb();
+                }
+                // END The user had a new conversation last time, push to db
+            }
+
+
+            // START if there is no data in dbPrefs, do not push to db, just clear both shared prefs
+
+            adapter.clearMessages();
+            adapter.notifyDataSetChanged();
+
+            SharedPreferences.Editor editorLocalHist = chatHistorySharedPref.edit();
+            editorLocalHist.remove("conversation");
+            editorLocalHist.apply();
+
+            SharedPreferences.Editor editorDb = dbSharedPref.edit();
+            editorDb.remove("conversation");
+            editorDb.apply();
+
+            // END if there is no data in dbPrefs, do not push to db, just clear both shared prefs
+
+
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+
 
     // on click buttons
     @Override
@@ -599,7 +671,7 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
             // add to shared prefs
             SharedPreferences.Editor editor = dbSharedPref.edit();
             editor.putString("conversation", TextUtils.join(";-`;", chatHistoryForDb));
-            editor.commit();
+            editor.apply();
 
             sendRequest(messageText);
 

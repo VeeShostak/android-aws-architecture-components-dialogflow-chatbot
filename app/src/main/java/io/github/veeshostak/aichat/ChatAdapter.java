@@ -134,6 +134,10 @@ public class ChatAdapter extends BaseAdapter {
         return holder;
     }
 
+    public void clearMessages() {
+        chatMessages.clear();
+    }
+
     public void addMessagesList(List<ChatMessage> messages) {
         chatMessages.addAll(messages);
     }
