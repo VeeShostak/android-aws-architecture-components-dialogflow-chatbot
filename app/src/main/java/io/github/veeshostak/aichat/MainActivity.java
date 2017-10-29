@@ -228,7 +228,6 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
             if (tempLocalHistory.size() > 0) {
                 for (String i : tempLocalHistory) {
                     ChatMessage tempMsg = new ChatMessage();
-                    tempMsg.setId(2);
 
                     // length of i guranteed to be at least 2 (u: or m:)
                     if (i.charAt(0) == 'u') {
@@ -237,7 +236,6 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
                         tempMsg.setMe(false);
                     }
                     tempMsg.setMessage(i.substring(i.indexOf(':') + 1));
-                    tempMsg.setDate(DateFormat.getDateTimeInstance().format(new Date()));
 
                     displayMessage(tempMsg);
                 }
@@ -366,7 +364,6 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
                 // display persisted conversation to the user
                 for (String i:tempLocalHistory ) {
                     ChatMessage tempMsg = new ChatMessage();
-                    tempMsg.setId(2);
 
                     // length of i guranteed to be at least 2 (u: or m:)
                     if(i.charAt(0) == 'u') {
@@ -374,8 +371,7 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
                     } else {
                         tempMsg.setMe(false);
                     }
-                    tempMsg.setMessage(i);
-                    tempMsg.setDate(DateFormat.getDateTimeInstance().format(new Date()));
+                    tempMsg.setMessage(i.substring(i.indexOf(':') + 1));
 
                     displayMessage(tempMsg);
                 }
@@ -417,76 +413,24 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
 
     private void selectWelcomeChatMessage(){
 
+        // randomly select random greeting message
+        // add to dbprefs
+
         int unicode = 0x1F60A;
         String smile = new String(Character.toChars(unicode));
 
-        Calendar cal = Calendar.getInstance();
-        // remove next line if you're always using the current time.
-        cal.setTime(new Date());
-        cal.add(Calendar.MINUTE, -1);
-        Date minBack0 = cal.getTime();
 
-        cal.setTime(new Date());
-        cal.add(Calendar.MINUTE, +1);
-        Date minBack1 = cal.getTime();
-
-        cal.setTime(new Date());
-        cal.add(Calendar.MINUTE, +3);
-        Date minBack2 = cal.getTime();
 
         ChatMessage msg = new ChatMessage();
-        msg.setId(1);
         msg.setMe(true);
-        msg.setMessage("Do you like chatting?");
-        msg.setDate(DateFormat.getDateTimeInstance().format(minBack0));
+        msg.setMessage("Do you like chatting?" + smile);
         chatHistory.add(msg);
-
-        ChatMessage msg1 = new ChatMessage();
-        msg1.setId(2);
-        msg1.setMe(false);
-        msg1.setMessage("Only if it's with you" + smile);
-        msg1.setDate(DateFormat.getDateTimeInstance().format(new Date()));
-        chatHistory.add(msg1);
-        // ==
-        ChatMessage msg2 = new ChatMessage();
-        msg2.setId(3);
-        msg2.setMe(true);
-        msg2.setMessage("Who are you?");
-        msg2.setDate(DateFormat.getDateTimeInstance().format(minBack1));
-        chatHistory.add(msg2);
-
-        ChatMessage msg3 = new ChatMessage();
-        msg3.setId(4);
-        msg3.setMe(false);
-        msg3.setMessage("Today a name, tomorrow a legend");
-        msg3.setDate(DateFormat.getDateTimeInstance().format(minBack1));
-        chatHistory.add(msg3);
-        // ==
-
-        ChatMessage msg4 = new ChatMessage();
-        msg4.setId(5);
-        msg4.setMe(true);
-        msg4.setMessage("Haha! Your funny!");
-        msg4.setDate(DateFormat.getDateTimeInstance().format(minBack2));
-        chatHistory.add(msg4);
-
-        ChatMessage msg5 = new ChatMessage();
-        msg5.setId(6);
-        msg5.setMe(false);
-        msg5.setMessage("*You’re.\nThe grammar police are on their way, I just called them");
-        msg5.setDate(DateFormat.getDateTimeInstance().format(minBack2));
-        chatHistory.add(msg5);
-
-
 
         for(int i=0; i<chatHistory.size(); i++) {
             ChatMessage message = chatHistory.get(i);
             displayMessage(message);
         }
 
-//        chatHistoryForDb.add(machine+"Hi");
-//        chatHistoryForDb.add(machine+"How r u doing??");
-//        chatHistoryForDb.add(user+"great, thanks for asking");
 
     }
 
@@ -583,9 +527,8 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
                 //Toast.makeText(getApplicationContext(),"Speech:" + speech , Toast.LENGTH_LONG).show();
 
                 ChatMessage chatMessage = new ChatMessage();
-                chatMessage.setId(122);//dummy
                 chatMessage.setMessage(speech);
-                chatMessage.setDate(DateFormat.getDateTimeInstance().format(new Date()));
+
                 chatMessage.setMe(false);
 
 
@@ -646,9 +589,7 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
             }
 
             ChatMessage chatMessage = new ChatMessage();
-            chatMessage.setId(123);//dummy
             chatMessage.setMessage(messageText);
-            chatMessage.setDate(DateFormat.getDateTimeInstance().format(new Date()));
             chatMessage.setMe(true);
 
             userMessage.setText(""); // clear message field
