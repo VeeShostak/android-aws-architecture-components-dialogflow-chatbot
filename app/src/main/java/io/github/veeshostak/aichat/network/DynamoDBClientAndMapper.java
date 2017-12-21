@@ -1,4 +1,4 @@
-package io.github.veeshostak.aichat;
+package io.github.veeshostak.aichat.network;
 
 // aws
 

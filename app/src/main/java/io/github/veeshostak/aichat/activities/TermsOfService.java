@@ -1,4 +1,4 @@
-package io.github.veeshostak.aichat;
+package io.github.veeshostak.aichat.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -7,6 +7,8 @@ import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+
+import io.github.veeshostak.aichat.R;
 
 /**
  * Created by vladshostak on 2/2/17.

@@ -1,7 +1,5 @@
-package io.github.veeshostak.aichat.Models;
+package io.github.veeshostak.aichat.models;
 
-
-import android.util.ArraySet;
 
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.*;
 import java.util.ArrayList;

@@ -1,11 +1,10 @@
-package io.github.veeshostak.aichat;
+package io.github.veeshostak.aichat.activities;
 
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -15,9 +14,11 @@ import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
 
 
 import java.io.File;
-import java.util.HashSet;
 
-import io.github.veeshostak.aichat.Models.User;
+import io.github.veeshostak.aichat.network.DynamoDBClientAndMapper;
+import io.github.veeshostak.aichat.utils.Installation;
+import io.github.veeshostak.aichat.R;
+import io.github.veeshostak.aichat.models.User;
 
 
 public class SignInActivity extends AppCompatActivity implements View.OnClickListener {

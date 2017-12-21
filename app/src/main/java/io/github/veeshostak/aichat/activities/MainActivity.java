@@ -1,4 +1,4 @@
-package io.github.veeshostak.aichat;
+package io.github.veeshostak.aichat.activities;
 
 import android.content.Context;
 import android.content.Intent;
@@ -22,18 +22,17 @@ import ai.api.model.AIEvent;
 import ai.api.model.AIRequest;
 import ai.api.model.AIResponse;
 import ai.api.model.Result;
-import io.github.veeshostak.aichat.Models.User;
-import io.github.veeshostak.aichat.Models.UserConversation;
+import io.github.veeshostak.aichat.adapters.ChatAdapter;
+import io.github.veeshostak.aichat.models.ChatMessage;
+import io.github.veeshostak.aichat.network.DynamoDBClientAndMapper;
+import io.github.veeshostak.aichat.utils.Installation;
+import io.github.veeshostak.aichat.R;
+import io.github.veeshostak.aichat.models.User;
+import io.github.veeshostak.aichat.models.UserConversation;
 // end api.ai imports
 
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -50,10 +49,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.text.DateFormat;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.Locale;
 import java.util.UUID;
 
 

@@ -1,4 +1,4 @@
-package io.github.veeshostak.aichat;
+package io.github.veeshostak.aichat.adapters;
 
 
 import android.app.Activity;
@@ -14,6 +14,9 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import java.util.List;
+
+import io.github.veeshostak.aichat.models.ChatMessage;
+import io.github.veeshostak.aichat.R;
 
 public class ChatAdapter extends BaseAdapter {
 
