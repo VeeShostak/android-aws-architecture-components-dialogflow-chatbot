@@ -180,6 +180,7 @@ public class MainActivity extends AppCompatActivity implements AIListener, View.
 
 
 
+
         // NOTE: need to guarantee strings (user messages, ai responses) do not contain ;-`;
 
         // get the last conversation
