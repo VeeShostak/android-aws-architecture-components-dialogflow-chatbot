@@ -20,7 +20,7 @@ public class ChatMessage {
         return isMe;
     }
 
-    public void setMe(boolean isMe) {
+    public void setIsMe(boolean isMe) {
         this.isMe = isMe;
     }
 
@@ -40,7 +40,7 @@ public class ChatMessage {
 //        this.userId = userId;
 //    }
 
-    // public String getDate() { return dateTime; }
+    public String getDateTime() { return dateTime; }
 
-    // public void setDate(String dateTime) { this.dateTime = dateTime; }
+    public void setDateTime(String dateTime) { this.dateTime = dateTime; }
 }

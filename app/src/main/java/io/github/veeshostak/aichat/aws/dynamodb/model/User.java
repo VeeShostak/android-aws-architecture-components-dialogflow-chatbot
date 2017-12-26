@@ -1,4 +1,4 @@
-package io.github.veeshostak.aichat.models;
+package io.github.veeshostak.aichat.aws.dynamodb.model;
 
 
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.*;

@@ -1,8 +1,10 @@
-package io.github.veeshostak.aichat.models;
+package io.github.veeshostak.aichat.aws.dynamodb.model;
 
 
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.*;
 import java.util.ArrayList;
+
+import io.github.veeshostak.aichat.database.entity.ChatPost;
 
 
 // User Conversations
@@ -28,7 +30,7 @@ public class UserConversation {
     public void setConversationId(String conversationId) { this.conversationId = conversationId; }
 
 
-    @DynamoDBRangeKey(attributeName="ConversationDateTime")
+    @DynamoDBRangeKey(attributeName="ConversationDateTime") // sort
     public String getConversationDateTime() { return conversationDateTime; }
 
     public void setConversationDateTime(String conversationDateTime) { this.conversationDateTime = conversationDateTime; }
@@ -57,6 +59,10 @@ public class UserConversation {
 
         this.conversation = new ArrayList<String>(conversation);
     }
+
+
+
+
 
 
 }

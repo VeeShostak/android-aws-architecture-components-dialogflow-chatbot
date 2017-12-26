@@ -67,7 +67,7 @@ public class ChatAdapter extends BaseAdapter {
             holder = (ViewHolder) convertView.getTag();
         }
 
-        isMe = chatMessage.getIsMe() ;
+        isMe = chatMessage.getIsMe();
 
         setAlignment(holder, isMe);
         holder.txtMessage.setText(chatMessage.getMessage());

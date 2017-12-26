@@ -15,10 +15,10 @@ import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
 
 import java.io.File;
 
-import io.github.veeshostak.aichat.network.DynamoDBClientAndMapper;
+import io.github.veeshostak.aichat.aws.dynamodb.DynamoDBClientAndMapper;
 import io.github.veeshostak.aichat.utils.Installation;
 import io.github.veeshostak.aichat.R;
-import io.github.veeshostak.aichat.models.User;
+import io.github.veeshostak.aichat.aws.dynamodb.model.User;
 
 
 public class SignInActivity extends AppCompatActivity implements View.OnClickListener {

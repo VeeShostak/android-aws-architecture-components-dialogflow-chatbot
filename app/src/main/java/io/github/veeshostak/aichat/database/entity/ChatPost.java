@@ -25,6 +25,9 @@ public class ChatPost {
     @ColumnInfo(name = "created_at")
     private String createdAt;
 
+    @ColumnInfo(name = "pushed_to_remote_db")
+    private Boolean pushedToRemoteDb;
+
 
     public int getId() {
         return id;
@@ -56,6 +59,14 @@ public class ChatPost {
 
     public void setCreatedAt(String createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Boolean getPushedToRemoteDb() {
+        return pushedToRemoteDb;
+    }
+
+    public void setPushedToRemoteDb(Boolean pushedToRemoteDb) {
+        this.pushedToRemoteDb = pushedToRemoteDb;
     }
 }
 

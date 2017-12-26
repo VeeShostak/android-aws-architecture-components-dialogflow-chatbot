@@ -7,6 +7,8 @@ import android.arch.persistence.room.OnConflictStrategy;
 import android.arch.persistence.room.Query;
 import android.arch.persistence.room.Update;
 
+import java.util.List;
+
 import io.github.veeshostak.aichat.database.entity.ChatPost;
 
 /**
@@ -20,23 +22,27 @@ import io.github.veeshostak.aichat.database.entity.ChatPost;
 public interface ChatPostDao {
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    public void insertChatMessages(ChatPost... chatMessages); // array of chatMessages
+    void insertChatMessages(ChatPost... chatPosts); // array of chatPosts (0 or more)
 
     @Update
-    public void updateChatPosts(ChatPost... chatPost);
+    void updateChatPosts(ChatPost... chatPosts);
 
     @Delete // uses the primary keys to find the entities to delete.
-    public void deleteChatPosts(ChatPost... chatPost);
+    void deleteChatPosts(ChatPost... chatPosts);
 
     // Queries:
     // Each @Query method is verified at compile time. (Room also verifies the return value of the query)
 
     @Query("SELECT * FROM chat_posts")
-    public ChatPost[] getAllChatPosts();
+    List<ChatPost> getAllChatPosts();
+
+    @Query("SELECT * FROM chat_posts WHERE pushed_to_remote_db = 0")
+    List<ChatPost> getAllChatPostsNotInRemoteDb();
+
+    @Query("DELETE FROM chat_posts")
+    int deleteAllChatPosts(); // return # of deleted rows
 
     @Query("SELECT * FROM chat_posts WHERE user_query = :userQuery LIMIT 1")
-    public ChatPost getChatPostWithUserQuery(String userQuery);
-
-
+    ChatPost getChatPostWithUserQuery(String userQuery);
 
 }

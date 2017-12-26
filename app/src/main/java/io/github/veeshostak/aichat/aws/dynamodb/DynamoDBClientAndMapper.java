@@ -1,4 +1,4 @@
-package io.github.veeshostak.aichat.network;
+package io.github.veeshostak.aichat.aws.dynamodb;
 
 // aws
 
