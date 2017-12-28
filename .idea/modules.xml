@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/ai-chat-bot-android.iml" filepath="$PROJECT_DIR$/ai-chat-bot-android.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android-aws-architecture-components-dialogflow-chatbot.iml" filepath="$PROJECT_DIR$/android-aws-architecture-components-dialogflow-chatbot.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>
