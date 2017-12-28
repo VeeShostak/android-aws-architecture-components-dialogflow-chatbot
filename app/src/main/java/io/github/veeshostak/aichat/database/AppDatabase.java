@@ -13,15 +13,15 @@ import io.github.veeshostak.aichat.database.entity.ChatPost;
  */
 
 @Database(entities = {ChatPost.class}, version = 1)
-public abstract class ChatPostDatabase extends RoomDatabase {
+public abstract class AppDatabase extends RoomDatabase {
     // create Db and get an instance of it
-    private static ChatPostDatabase INSTANCE;
+    private static AppDatabase INSTANCE;
 
-    public static ChatPostDatabase getDatabase(Context context) {
+    public static AppDatabase getDatabase(Context context) {
         if (INSTANCE == null) {
             INSTANCE =
                     Room.databaseBuilder(context.getApplicationContext(),
-                            ChatPostDatabase.class, "user-chat-posts")
+                            AppDatabase.class, "user-chat-posts")
                             .build();
         }
         return INSTANCE;
