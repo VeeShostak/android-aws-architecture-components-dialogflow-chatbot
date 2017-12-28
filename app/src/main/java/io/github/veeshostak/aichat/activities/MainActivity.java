@@ -1,11 +1,13 @@
 package io.github.veeshostak.aichat.activities;
 
 
-import android.arch.persistence.room.Room;
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.AsyncTask;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
@@ -25,7 +27,6 @@ import ai.api.model.AIRequest;
 import ai.api.model.AIResponse;
 import ai.api.model.Result;
 import io.github.veeshostak.aichat.adapters.ChatAdapter;
-import io.github.veeshostak.aichat.database.ChatPostDatabase;
 import io.github.veeshostak.aichat.database.entity.ChatPost;
 import io.github.veeshostak.aichat.models.ChatMessage;
 import io.github.veeshostak.aichat.aws.dynamodb.DynamoDBClientAndMapper;
@@ -33,6 +34,11 @@ import io.github.veeshostak.aichat.utils.Installation;
 import io.github.veeshostak.aichat.R;
 import io.github.veeshostak.aichat.aws.dynamodb.model.User;
 import io.github.veeshostak.aichat.aws.dynamodb.model.UserConversation;
+import io.github.veeshostak.aichat.viewmodels.AddChatPostsViewModel;
+import io.github.veeshostak.aichat.viewmodels.DeleteAllChatPostsViewModel;
+import io.github.veeshostak.aichat.viewmodels.ListAllChatPostsViewModel;
+import io.github.veeshostak.aichat.viewmodels.ListNotInRemoteChatPostsViewModel;
+import io.github.veeshostak.aichat.viewmodels.UpdateChatPostsViewModel;
 // end api.ai imports
 
 
@@ -64,21 +70,26 @@ import com.amazonaws.services.dynamodbv2.*;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.*;
 
 
-// implements AIListener (for tts)
+// for TTS: implement AIListener
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     private static final String TAG = "ChatActivity";
     //private final int REQUEST_INTERNET = 1;
 
-    // when pushing to DynamoDb, push list of messages prefixed accordingly
+    // when pushing to DynamoDb, push list of String messages prefixed accordingly
     private static final String USER_QUERY_PREFIX = "u:";
     private static final String MACHINE_RESPONSE_PREFIX = "m:";
 
-    //local Room persistent db
-    ChatPostDatabase localDbChatPosts;
+    // ViewModels with Room Persistent DB
+    private AddChatPostsViewModel addChatPostsViewModel;
+    private ListAllChatPostsViewModel listAllChatPostsViewModel;
+    private ListNotInRemoteChatPostsViewModel listNotInRemoteChatPostsViewModel;
+    private UpdateChatPostsViewModel updateChatPostsViewModel;
+    private DeleteAllChatPostsViewModel deleteAllChatPostsViewModel;
 
     // all local chatPosts from local Room persistent db
     ArrayList<ChatPost> allLocalChatPosts;
+    ArrayList<ChatPost> allLocalNotInRemoteChatPosts;
 
     // user id
     private String uniqueId;
@@ -152,9 +163,34 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mapper = dynamoDb.getMapper();
 
         // START Create local Room Persistent Db
-        localDbChatPosts = Room.databaseBuilder(getApplicationContext(),
-                ChatPostDatabase.class, "user-chat-posts").build();
+//        localDbChatPosts = Room.databaseBuilder(getApplicationContext(),
+//                AppDatabase.class, "user-chat-posts").build();
         // END Create local Room Persistent Db
+
+        listAllChatPostsViewModel = ViewModelProviders.of(this).get(ListAllChatPostsViewModel.class);
+        listNotInRemoteChatPostsViewModel = ViewModelProviders.of(this).get(ListNotInRemoteChatPostsViewModel.class);
+        addChatPostsViewModel = ViewModelProviders.of(this).get(AddChatPostsViewModel.class);
+        deleteAllChatPostsViewModel = ViewModelProviders.of(this).get(DeleteAllChatPostsViewModel.class);
+        updateChatPostsViewModel = ViewModelProviders.of(this).get(UpdateChatPostsViewModel.class);
+
+
+        // observe all chatPosts
+        listAllChatPostsViewModel.getData().observe(MainActivity.this, new Observer<List<ChatPost>>() {
+            @Override
+            public void onChanged(@Nullable List<ChatPost> chatPosts) {
+                //recyclerViewAdapter.addItems(chatPost);
+                allLocalChatPosts = new ArrayList<>(chatPosts);
+            }
+        });
+
+        // observe chatPosts that are not in remote db (have not benn pushed back)
+        listNotInRemoteChatPostsViewModel.getData().observe(MainActivity.this, new Observer<List<ChatPost>>() {
+            @Override
+            public void onChanged(@Nullable List<ChatPost> chatPosts) {
+                //recyclerViewAdapter.addItems(chatPost);
+                allLocalNotInRemoteChatPosts = new ArrayList<>(chatPosts);
+            }
+        });
 
 
         // TODO: ======== INIT Method finishes Here ===================
@@ -164,19 +200,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // if they exist, push them back to remoteDb. else do nothing.
         // then set pushedToRemoteDb value of each retrieved chatPost to true and run update transaction
 
-        ArrayList<ChatPost> chatPostsToPush = new ArrayList<ChatPost>(localDbChatPosts.chatPostDao().getAllChatPostsNotInRemoteDb());
-        if (!chatPostsToPush.isEmpty()) {
+        //ArrayList<ChatPost> chatPostsToPush = new ArrayList<ChatPost>(listNotInRemoteChatPostsViewModel.getAllChatPostsNotInRemoteDb());
+        if (allLocalNotInRemoteChatPosts != null && !allLocalNotInRemoteChatPosts.isEmpty()) {
             // update db with stored chat history, on success update local (set pushedToRemoteDb to true)
-            new TaskAddChatPostsToRemoteDb(this, chatPostsToPush).execute();
+            new TaskAddChatPostsToRemoteDb(this, allLocalNotInRemoteChatPosts).execute();
         }
         // if they do not exist, do nothing
         // END: check to see if there are chatPosts that need to be pushed to RemoteDb, push them and mark as pushed
 
         // START: get all ChatPosts from local Room persistent Db and display in RecyclerView
         // get all chat posts from local Room persistent db, shallow copy
-        allLocalChatPosts = new ArrayList<ChatPost>(localDbChatPosts.chatPostDao().getAllChatPosts());
 
-        if (allLocalChatPosts.isEmpty()) {
+        //allLocalChatPosts = new ArrayList<ChatPost>(listAllChatPostsViewModel.getData());
+        if (allLocalChatPosts == null || allLocalChatPosts.isEmpty()) {
             // empty, so select random welcome message and add to RecyclerView
             // selectWelcomeChatMessage();
 
@@ -232,7 +268,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         protected AmazonClientException doInBackground(final String... params) {
 
             // access params
-            //params[0]
+            // params[0]
 
             try {
 
@@ -264,8 +300,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 // get user with Id PK
                 User selectedUser = activityReference.get().mapper.load(User.class, activityReference.get().uniqueId);
 
+
                 // get existing conversationsIds from user, if they exist
-                if (!selectedUser.getConversationIds().isEmpty()) {
+                if (selectedUser != null && selectedUser.getConversationIds() != null && !selectedUser.getConversationIds().isEmpty() ) {
                     // they exist, shallow copy them
                     conversationIds = new HashSet<String>(selectedUser.getConversationIds());
                 } else {
@@ -275,7 +312,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 // add new conversation id to hashSet
                 conversationIds.add(conversationId);
                 // add updated hashSet to our loaded user
+
                 selectedUser.setConversationIds(conversationIds);
+
 
                 // END: add conversationId to this User in the User Table
 
@@ -315,7 +354,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
             // run update transaction on local room persistent db
             // note: pass in toArray(new ChatPost[0]) instead of toArray(new ChatPost[chatPostsToAdd.size()]) due to JVM optimizations
-            activityReference.get().localDbChatPosts.chatPostDao().updateChatPosts(chatPostsToAdd.toArray(new ChatPost[0]));
+            activityReference.get().updateChatPostsViewModel.updateChatPosts((chatPostsToAdd.toArray(new ChatPost[0])));
             // END set pushedToRemoteDb boolean value of each retrieved chatPost to true, update local Room Db
             return null;
         }
@@ -372,8 +411,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             // if they exist, push them back to remoteDb. else do nothing.
             // then set pushedToRemoteDb value of each retrieved chatPost to true and run update transaction
 
-            ArrayList<ChatPost> chatPostsToPush = new ArrayList<ChatPost>(localDbChatPosts.chatPostDao().getAllChatPostsNotInRemoteDb());
-            if (!chatPostsToPush.isEmpty()) {
+            ArrayList<ChatPost> chatPostsToPush = new ArrayList<ChatPost>(allLocalNotInRemoteChatPosts);
+            if (chatPostsToPush != null && !chatPostsToPush.isEmpty()) {
                 // update db with stored chat history, on success update local (set pushedToRemoteDb to true)
                 new TaskAddChatPostsToRemoteDb(this, chatPostsToPush).execute();
             }
@@ -381,7 +420,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             // END: check to see if there are chatPosts that need to be pushed to RemoteDb, push them and mark as pushed
 
             // clear chatPosts from local Room persisted db
-            localDbChatPosts.chatPostDao().deleteAllChatPosts();
+            //deleteAllChatPostsViewModel.deleteAllChatPosts();
 
             // clear RecyclerView
             adapter.clearMessages();
@@ -549,7 +588,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     mChatPost.setResponse(speech);
                     mChatPost.setPushedToRemoteDb(false);
                     mChatPost.setCreatedAt(DateFormat.getDateTimeInstance().format(new Date()));
-                    localDbChatPosts.chatPostDao().insertChatMessages(mChatPost);
+                    addChatPostsViewModel.addChatPosts(mChatPost);
                 }
 
             });
