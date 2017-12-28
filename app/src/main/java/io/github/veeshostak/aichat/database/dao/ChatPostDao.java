@@ -1,5 +1,6 @@
 package io.github.veeshostak.aichat.database.dao;
 
+import android.arch.lifecycle.LiveData;
 import android.arch.persistence.room.Dao;
 import android.arch.persistence.room.Delete;
 import android.arch.persistence.room.Insert;
@@ -22,7 +23,7 @@ import io.github.veeshostak.aichat.database.entity.ChatPost;
 public interface ChatPostDao {
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    void insertChatMessages(ChatPost... chatPosts); // array of chatPosts (0 or more)
+    void insertChatPosts(ChatPost... chatPosts); // array of chatPosts (0 or more)
 
     @Update
     void updateChatPosts(ChatPost... chatPosts);
@@ -34,15 +35,15 @@ public interface ChatPostDao {
     // Each @Query method is verified at compile time. (Room also verifies the return value of the query)
 
     @Query("SELECT * FROM chat_posts")
-    List<ChatPost> getAllChatPosts();
+    LiveData<List<ChatPost>> getAllChatPosts();
 
     @Query("SELECT * FROM chat_posts WHERE pushed_to_remote_db = 0")
-    List<ChatPost> getAllChatPostsNotInRemoteDb();
+    LiveData<List<ChatPost>> getAllChatPostsNotInRemoteDb();
 
     @Query("DELETE FROM chat_posts")
-    int deleteAllChatPosts(); // return # of deleted rows
+    void deleteAllChatPosts();
 
-    @Query("SELECT * FROM chat_posts WHERE user_query = :userQuery LIMIT 1")
-    ChatPost getChatPostWithUserQuery(String userQuery);
+//    @Query("SELECT * FROM chat_posts WHERE user_query = :userQuery LIMIT 1")
+//    ChatPost getChatPostWithUserQuery(String userQuery);
 
 }
