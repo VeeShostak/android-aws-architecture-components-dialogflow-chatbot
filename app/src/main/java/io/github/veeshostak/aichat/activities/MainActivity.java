@@ -30,6 +30,7 @@ import io.github.veeshostak.aichat.adapters.ChatAdapter;
 import io.github.veeshostak.aichat.database.entity.ChatPost;
 import io.github.veeshostak.aichat.models.ChatMessage;
 import io.github.veeshostak.aichat.aws.dynamodb.DynamoDBClientAndMapper;
+import io.github.veeshostak.aichat.recyclerview.adapter.MessageListAdapter;
 import io.github.veeshostak.aichat.utils.Installation;
 import io.github.veeshostak.aichat.R;
 import io.github.veeshostak.aichat.aws.dynamodb.model.User;
@@ -50,6 +51,8 @@ import java.util.HashSet;
 import java.util.List;
 
 
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
@@ -95,9 +98,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private String uniqueId;
 
     private EditText userMessage;
-    private ListView messagesContainer;
     private Button sendBtn;
-    private ChatAdapter adapter;
+
+    private RecyclerView mMessageRecycler;
+    private MessageListAdapter mMessageAdapter;
+    private LinearLayoutManager mManager;
+
+
 
 
     // Dialogflow vars
@@ -115,9 +122,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
 
-        final AIConfiguration config = new AIConfiguration("123abc",
+        final AIConfiguration config = new AIConfiguration(getString(R.string.dialog_dlow_client_token),
                 AIConfiguration.SupportedLanguages.English,
                 AIConfiguration.RecognitionEngine.System);
+
 
         /*
         // permissions for listening
@@ -136,18 +144,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void initControls() {
 
-        messagesContainer = (ListView) findViewById(R.id.messagesContainer);
+
         userMessage = (EditText) findViewById(R.id.userMessageField);
-
-        adapter = new ChatAdapter(MainActivity.this, new ArrayList<ChatMessage>());
-        messagesContainer.setAdapter(adapter);
-
         sendBtn = (Button) findViewById(R.id.sendMessageButton);
         sendBtn.setOnClickListener(this);
 
-        TextView machineName = (TextView) findViewById(R.id.machineName);
-        machineName.setText("Fiona");
-        machineName.setTextColor(Color.BLACK);
+        // get reference to rec view
+        mMessageRecycler = (RecyclerView) findViewById(R.id.reyclerview_message_list);
+
+        // choose layOutManager, reverse layout
+        mManager = new LinearLayoutManager(this);
+        //mManager.setReverseLayout(true);
+        //mManager.setStackFromEnd(true);
+        mMessageRecycler.setLayoutManager(mManager);
+
+        // populate adapter with dataSource
+        mMessageAdapter = new MessageListAdapter(this, fromChatPostListToChatMessageList(allLocalChatPosts));
+        mMessageRecycler.setLayoutManager(mManager);
+
+        // set adapter
+        mMessageRecycler.setAdapter(mMessageAdapter);
+
+
 
         // retrieve ID from signInActivity
 //        Bundle extras = getIntent().getExtras();
@@ -174,12 +192,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         updateChatPostsViewModel = ViewModelProviders.of(this).get(UpdateChatPostsViewModel.class);
 
 
+
+
+        // TODO: ======== INIT Method finishes Here ===================
+
         // observe all chatPosts
         listAllChatPostsViewModel.getData().observe(MainActivity.this, new Observer<List<ChatPost>>() {
             @Override
             public void onChanged(@Nullable List<ChatPost> chatPosts) {
                 //recyclerViewAdapter.addItems(chatPost);
                 allLocalChatPosts = new ArrayList<>(chatPosts);
+                mMessageAdapter.addItems(fromChatPostListToChatMessageList(allLocalChatPosts));
             }
         });
 
@@ -187,13 +210,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         listNotInRemoteChatPostsViewModel.getData().observe(MainActivity.this, new Observer<List<ChatPost>>() {
             @Override
             public void onChanged(@Nullable List<ChatPost> chatPosts) {
-                //recyclerViewAdapter.addItems(chatPost);
                 allLocalNotInRemoteChatPosts = new ArrayList<>(chatPosts);
             }
         });
 
-
-        // TODO: ======== INIT Method finishes Here ===================
+        // TODO: add a welcome message on app start to also trigger onChange
 
 
         // START: check to see if there are chatPosts that need to be pushed to RemoteDb, push them and mark as pushed
@@ -216,27 +237,36 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             // empty, so select random welcome message and add to RecyclerView
             // selectWelcomeChatMessage();
 
-        } else {
+        }
+        /*
+        else {
+            // not needed since observing liveData
             // display all chat posts
+
             for (ChatPost chatPost : allLocalChatPosts) {
                 ChatMessage tempMsgMe = new ChatMessage();
                 ChatMessage tempMsgMachine = new ChatMessage();
 
                 tempMsgMe.setIsMe(true);
                 tempMsgMe.setMessage(chatPost.getUserQuery());
-                tempMsgMe.setDateTime(chatPost.getCreatedAt());
+                tempMsgMe.setCreatedAt(chatPost.getCreatedAt());
 
                 tempMsgMachine.setIsMe(false);
                 tempMsgMachine.setMessage(chatPost.getResponse());
-                tempMsgMachine.setDateTime(chatPost.getCreatedAt());
+                tempMsgMachine.setCreatedAt(chatPost.getCreatedAt());
 
                 displayMessage(tempMsgMe);
                 displayMessage(tempMsgMachine);
+
+
             }
         }
+        */
         // END: get all ChatPosts from local Room persistent Db and display in RecyclerView
 
     }
+
+
 
 
     /*
@@ -368,18 +398,43 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    public void displayMessage(ChatMessage message) {
-        adapter.add(message);
-        adapter.notifyDataSetChanged();
-        scroll();
+    public List<ChatMessage> fromChatPostListToChatMessageList(List<ChatPost> chatPosts) {
+
+        if (chatPosts == null ) {
+            return null;
+        }
+
+        List<ChatMessage> mMessageList = new ArrayList<>();
+
+        for(ChatPost chatPost: chatPosts) {
+
+            ChatMessage tempMsgMe = new ChatMessage();
+            ChatMessage tempMsgMachine = new ChatMessage();
+
+            tempMsgMe.setIsMe(true);
+            tempMsgMe.setMessage(chatPost.getUserQuery());
+            tempMsgMe.setCreatedAt(chatPost.getCreatedAt());
+
+            tempMsgMachine.setIsMe(false);
+            tempMsgMachine.setMessage(chatPost.getResponse());
+            tempMsgMachine.setCreatedAt(chatPost.getCreatedAt());
+
+            mMessageList.add(tempMsgMe);
+            mMessageList.add(tempMsgMachine);
+        }
+        return mMessageList;
+
     }
 
-    private void scroll() {
-        messagesContainer.setSelection(messagesContainer.getCount() - 1);
+    /*
+    public void displayMessage(ChatMessage message) {
+        mMessageAdapter.add(message);
+        mMessageAdapter.notifyDataSetChanged();
+        //scroll();
     }
+    */
 
     private void selectWelcomeChatMessage(){
-
         // todo: implement. randomly select random greeting message
         int unicode = 0x1F60A;
         String smile = new String(Character.toChars(unicode));
@@ -420,15 +475,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             // END: check to see if there are chatPosts that need to be pushed to RemoteDb, push them and mark as pushed
 
             // clear chatPosts from local Room persisted db
-            //deleteAllChatPostsViewModel.deleteAllChatPosts();
+            deleteAllChatPostsViewModel.deleteAllChatPosts();
 
+            // RecyclerView is cleared since we are obesrving livedata
             // clear RecyclerView
-            adapter.clearMessages();
+            // mMessageAdapter.clearMessages();
+            // mMessageAdapter.notifyDataSetChanged();
 
             // select welcome message to add
             //selectWelcomeChatMessage();
 
-            adapter.notifyDataSetChanged();
+
 
             return true;
         }
@@ -446,15 +503,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             if (TextUtils.isEmpty(messageText)) {
                 return;
             }
+            userMessage.setText(""); // clear message field
 
+            /*
+            // Not needed since we are observing liveData
             // START: display userQuery in RecyclerView
             ChatMessage chatMessage = new ChatMessage();
             chatMessage.setMessage(messageText);
             chatMessage.setIsMe(true);
 
-            userMessage.setText(""); // clear message field
             displayMessage(chatMessage); // display in RecyclerView
             // END: display userQuery in RecyclerView
+            */
 
             // START: send userQuery to dialogFlow API, once obtain response: add to RecyclerView, add chatPost to local Room db
             // pass params
@@ -575,12 +635,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     //Log.i(TAG, "Speech: " + speech);
                     //Toast.makeText(getApplicationContext(),"Speech:" + speech , Toast.LENGTH_LONG).show();
 
+                    // not needed since we are observing live data, but to display right away we can call it now
+                    // since live data will only be updated when we have full ChatPost with response in AsyncTask
                     // display message in RecyclerView
+
                     ChatMessage chatMessage = new ChatMessage();
                     chatMessage.setMessage(speech);
                     chatMessage.setIsMe(false);
-                    chatMessage.setDateTime(DateFormat.getDateTimeInstance().format(new Date()));
-                    displayMessage(chatMessage);
+                    chatMessage.setCreatedAt(DateFormat.getDateTimeInstance().format(new Date()));
+                    mMessageAdapter.add(chatMessage);
+
 
                     // add ChatPost to local Room persistent db
                     ChatPost mChatPost = new ChatPost();

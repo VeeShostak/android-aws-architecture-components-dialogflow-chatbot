@@ -12,6 +12,8 @@ import com.amazonaws.auth.CognitoCachingCredentialsProvider;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.*;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.*;
+
+import io.github.veeshostak.aichat.R;
 //import com.amazonaws.services.dynamodbv2.model.*;
 
 
@@ -28,7 +30,7 @@ public class DynamoDBClientAndMapper {
         // Initialize the Amazon Cognito credentials provider
         CognitoCachingCredentialsProvider credentialsProvider = new CognitoCachingCredentialsProvider(
                 theApplicationContext,
-                "us-west-2:3a2e4c77-2472-4e03-9afd-a872d24d9377", // Identity pool ID
+                theApplicationContext.getString(R.string.dynamodb_identity_pool_id), // Identity pool ID
                 Regions.US_WEST_2 // Region
         );
 
