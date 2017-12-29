@@ -26,7 +26,7 @@ import ai.api.model.AIEvent;
 import ai.api.model.AIRequest;
 import ai.api.model.AIResponse;
 import ai.api.model.Result;
-import io.github.veeshostak.aichat.adapters.ChatAdapter;
+
 import io.github.veeshostak.aichat.database.entity.ChatPost;
 import io.github.veeshostak.aichat.models.ChatMessage;
 import io.github.veeshostak.aichat.aws.dynamodb.DynamoDBClientAndMapper;
@@ -164,6 +164,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         // set adapter
         mMessageRecycler.setAdapter(mMessageAdapter);
+
+        // START: scroll to end when keyboard opens
+        mMessageRecycler.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            @Override
+            public void onLayoutChange(View v,
+                                       int left, int top, int right, int bottom,
+                                       int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                if (bottom < oldBottom) {
+                    mMessageRecycler.postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            mMessageRecycler.smoothScrollToPosition(
+                                    mMessageRecycler.getAdapter().getItemCount() - 1);
+                        }
+                    }, 100);
+                }
+            }
+        });
+        // END: scroll to end when keyboard opens
 
 
 
