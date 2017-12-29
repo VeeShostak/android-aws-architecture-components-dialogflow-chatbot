@@ -40,6 +40,8 @@ android {
 
 dependencies {
 
+    // todo: replace compile with "implementation" or "api" accordingly
+
     compile fileTree(include: ['*.jar'], dir: 'libs')
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
@@ -54,11 +56,15 @@ dependencies {
     }
     compile 'ai.api:sdk:2.0.7@aar'
 
+    // other
     compile 'com.google.code.gson:gson:2.8.1'
     compile 'commons-io:commons-io:20030203.000550'
 
     // RecyclerView
     compile 'com.android.support:recyclerview-v7:26.1.0'
+
+    // constraint layout
+    compile 'com.android.support.constraint:constraint-layout:1.0.2'
 
     // START Architecture Components
     // 1)Manage our UI components lifecycle 2)Persist data over configuration changes
