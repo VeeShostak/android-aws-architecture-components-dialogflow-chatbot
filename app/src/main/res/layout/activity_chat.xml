@@ -1,59 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
 
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
 
-    <RelativeLayout
-        android:id="@+id/container"
+    tools:context="io.github.veeshostak.aichat.activities.MainActivity"
+    >
+
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/reyclerview_message_list"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:padding="20dp">
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:scrollbars="vertical"
+        android:paddingBottom="50dp"
+        >
+
+    </android.support.v7.widget.RecyclerView>
+
+
+    <!-- userMessageField, send button -->
+    <LinearLayout
+        android:id="@+id/layout_chatbox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:minHeight="48dp"
+        android:background="#ffffff"
+
+        android:layout_alignParentBottom="true"
+        android:layout_alignLeft="@id/reyclerview_message_list"
+        android:layout_alignRight="@id/reyclerview_message_list"
+
+
+        >
 
         <EditText
             android:id="@+id/userMessageField"
-            android:layout_width="match_parent"
+            android:hint="Message..."
+            android:background="@android:color/transparent"
+            android:layout_gravity="center"
+            android:layout_marginLeft="16dp"
+            android:layout_marginRight="16dp"
+            android:layout_width="0dp"
+            android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_toLeftOf="@+id/sendMessageButton"
-            android:hint="message" />
+            android:maxLines="3"
+            android:focusable="true"
+            />
+
 
         <Button
             android:id="@+id/sendMessageButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentRight="true"
             android:text="Send"
-            android:textColor="@color/background_material_light"
-            style="@android:style/Widget.Holo.Button.Small" />
+            android:textSize="14dp"
+            android:background="?attr/selectableItemBackground"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_width="64dp"
+            android:layout_height="48dp"
+            android:gravity="center"
+            android:layout_gravity="bottom" />
 
-        <ListView
-            android:id="@+id/messagesContainer"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_alignParentLeft="false"
-            android:layout_alignParentTop="false"
-            android:layout_marginBottom="20dp"
-            android:layout_above="@+id/userMessageField"
-            android:layout_below="@+id/machineName"
-            android:layout_marginTop="10dp"
-            android:listSelector="@android:color/transparent"
-            android:transcriptMode="alwaysScroll"
-            android:divider="@null" />
+    </LinearLayout>
 
-        <TextView
-            android:id="@+id/machineName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_centerHorizontal="true"
-            android:text="Fiona"
-            android:textSize="20dp" />
-
-
-
-    </RelativeLayout>
-
-</LinearLayout>
+</RelativeLayout>
