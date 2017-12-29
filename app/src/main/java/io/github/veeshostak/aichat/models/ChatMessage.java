@@ -2,19 +2,18 @@ package io.github.veeshostak.aichat.models;
 
 
 public class ChatMessage {
-    private long id;
     private boolean isMe;
     private String message;
-    private Long userId;
-    private String dateTime;
+    private String createdAt;
+    private String userName;
 
-//    public long getId() {
-//        return id;
-//    }
-//
-//    public void setId(long id) {
-//        this.id = id;
-//    }
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
 
     public boolean getIsMe() {
         return isMe;
@@ -32,15 +31,7 @@ public class ChatMessage {
         this.message = message;
     }
 
-//    public long getUserId() {
-//        return userId;
-//    }
-//
-//    public void setUserId(long userId) {
-//        this.userId = userId;
-//    }
+    public String getCreatedAt() { return createdAt; }
 
-    public String getDateTime() { return dateTime; }
-
-    public void setDateTime(String dateTime) { this.dateTime = dateTime; }
+    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
 }
