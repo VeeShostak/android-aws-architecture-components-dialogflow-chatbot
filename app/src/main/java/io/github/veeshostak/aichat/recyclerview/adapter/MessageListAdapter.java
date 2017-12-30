@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import io.github.veeshostak.aichat.R;
@@ -27,7 +28,11 @@ public class MessageListAdapter extends RecyclerView.Adapter {
 
     public MessageListAdapter(Context context, List<ChatMessage> messageList) {
         mContext = context;
-        mMessageList = messageList;
+        if (messageList == null) {
+            mMessageList = new ArrayList<ChatMessage>();
+        } else {
+            mMessageList = messageList;
+        }
     }
 
     public void add(ChatMessage message) {
@@ -43,8 +48,6 @@ public class MessageListAdapter extends RecyclerView.Adapter {
     public void clearMessages() {
         mMessageList.clear();
     }
-
-
 
     @Override
     public int getItemCount() {
