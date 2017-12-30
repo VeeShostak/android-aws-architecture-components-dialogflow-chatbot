@@ -40,7 +40,7 @@ public class ReceivedMessageHolder extends RecyclerView.ViewHolder {
         //timeText.setText(DateUtils.formatDateTime(messageText.getContext(), message.getCreatedAt(), DateUtils.FORMAT_SHOW_DATE | DateUtils.FORMAT_NUMERIC_DATE)); // pass UTC milliseconds
 
         timeText.setText(message.getCreatedAt());
-        nameText.setText(message.getUserName());
+        nameText.setText("Fiona");
 
     }
 
