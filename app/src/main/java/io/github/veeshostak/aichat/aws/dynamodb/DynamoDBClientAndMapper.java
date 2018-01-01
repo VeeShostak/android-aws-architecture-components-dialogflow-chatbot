@@ -22,17 +22,18 @@ public class DynamoDBClientAndMapper {
     // private AmazonDynamoDBClient ddbClient;
     private DynamoDBMapper mapper;
 
-    public DynamoDBClientAndMapper(Context theApplicationContext) {
+    public DynamoDBClientAndMapper(Context theApplicationContext, CognitoCachingCredentialsProvider credentialsProvider) {
 
         // ==============
         // START aws
 
         // Initialize the Amazon Cognito credentials provider
-        CognitoCachingCredentialsProvider credentialsProvider = new CognitoCachingCredentialsProvider(
-                theApplicationContext,
-                theApplicationContext.getString(R.string.dynamodb_identity_pool_id), // Identity pool ID
-                Regions.US_WEST_2 // Region
-        );
+//        CognitoCachingCredentialsProvider credentialsProvider = new CognitoCachingCredentialsProvider(
+//                theApplicationContext,
+//                theApplicationContext.getString(R.string.dynamodb_identity_pool_id), // Identity pool ID
+//                Regions.US_WEST_2 // Region
+//        );
+
 
         //String identityId = credentialsProvider.getIdentityId();
         //Log.d("LogTag", "my ID is " + identityId);
