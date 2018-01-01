@@ -27,6 +27,7 @@ import ai.api.model.AIRequest;
 import ai.api.model.AIResponse;
 import ai.api.model.Result;
 
+import io.github.veeshostak.aichat.aws.cognito.CognitoHelper;
 import io.github.veeshostak.aichat.database.entity.ChatPost;
 import io.github.veeshostak.aichat.models.ChatMessage;
 import io.github.veeshostak.aichat.aws.dynamodb.DynamoDBClientAndMapper;
@@ -46,6 +47,7 @@ import java.lang.ref.WeakReference;
 import java.text.DateFormat;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 
@@ -62,10 +64,15 @@ import android.widget.ShareActionProvider;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.auth.CognitoCachingCredentialsProvider;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserSession;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.*;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.*;
 
@@ -110,6 +117,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     //aws
     private AmazonDynamoDBClient ddbClient;
     private DynamoDBMapper mapper;
+    private CognitoCachingCredentialsProvider credentialsProvider; // uses shared prefs to cache creds
 
     // shared prefs
     private SharedPreferences isFirstTimeSharedPref;
@@ -139,6 +147,36 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         aiDataService = new AIDataService(this, config);
 
         initControls();
+
+        // observe all chatPosts
+        listAllChatPostsViewModel.getData().observe(MainActivity.this, new Observer<List<ChatPost>>() {
+            @Override
+            public void onChanged(@Nullable List<ChatPost> chatPosts) {
+                //recyclerViewAdapter.addItems(chatPost);
+                allLocalChatPosts = new ArrayList<>(chatPosts);
+                mMessageAdapter.addItems(fromChatPostListToChatMessageList(allLocalChatPosts));
+                scroll();
+            }
+        });
+
+        // observe chatPosts that are not in remote db (have not benn pushed back)
+        listNotInRemoteChatPostsViewModel.getData().observe(MainActivity.this, new Observer<List<ChatPost>>() {
+            @Override
+            public void onChanged(@Nullable List<ChatPost> chatPosts) {
+                allLocalNotInRemoteChatPosts = new ArrayList<>(chatPosts);
+            }
+        });
+
+        // START: Determine if it's the user's first time opening the app, and just welcome or welcome them back accordingly
+        Boolean firstTime = isFirstTimeSharedPref.getBoolean("firstTime", true);
+
+        // the user is back to using the app, welcome them back! or just welcome new user if it's their first time
+        selectWelcomeChatMessage(firstTime);
+
+        SharedPreferences.Editor editor = isFirstTimeSharedPref.edit();
+        editor.putBoolean("firstTime", false);
+        editor.apply();
+        // END: Determine if it's the user's first time openeing the app, and just welcome or welcome them back accordingly
     }
 
     private void initControls() {
@@ -185,18 +223,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // END: scroll to end when keyboard opens
 
 
-        // retrieve ID from signInActivity
-//        Bundle extras = getIntent().getExtras();
-//        if (extras != null) {
-//            uniqueId = extras.getString("UNIQUE_ID");
-//        }
-
         // retrieve ID from file
         Installation GetId = new Installation();
         uniqueId = GetId.id(getApplicationContext());
-
-        DynamoDBClientAndMapper dynamoDb = new DynamoDBClientAndMapper(getApplicationContext());
-        mapper = dynamoDb.getMapper();
 
 
         listAllChatPostsViewModel = ViewModelProviders.of(this).get(ListAllChatPostsViewModel.class);
@@ -205,41 +234,28 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         deleteAllChatPostsViewModel = ViewModelProviders.of(this).get(DeleteAllChatPostsViewModel.class);
         updateChatPostsViewModel = ViewModelProviders.of(this).get(UpdateChatPostsViewModel.class);
 
-
         Context context = this;
         isFirstTimeSharedPref = context.getSharedPreferences(PREFS_IS_FIRST_TIME, Context.MODE_PRIVATE);
 
-        // TODO: ======== INIT Method finishes Here ===================
+        // START: get AWS credentials to access AWS resources
 
-        // observe all chatPosts
-        listAllChatPostsViewModel.getData().observe(MainActivity.this, new Observer<List<ChatPost>>() {
-            @Override
-            public void onChanged(@Nullable List<ChatPost> chatPosts) {
-                //recyclerViewAdapter.addItems(chatPost);
-                allLocalChatPosts = new ArrayList<>(chatPosts);
-                mMessageAdapter.addItems(fromChatPostListToChatMessageList(allLocalChatPosts));
-                scroll();
-            }
-        });
+        CognitoUserSession cognitoUserSession = CognitoHelper.getCurrSession();
+        // Get id token from CognitoUserSession.
+        String idToken = cognitoUserSession.getIdToken().getJWTToken();
 
-        // observe chatPosts that are not in remote db (have not benn pushed back)
-        listNotInRemoteChatPostsViewModel.getData().observe(MainActivity.this, new Observer<List<ChatPost>>() {
-            @Override
-            public void onChanged(@Nullable List<ChatPost> chatPosts) {
-                allLocalNotInRemoteChatPosts = new ArrayList<>(chatPosts);
-            }
-        });
+        // Create a credentials provider, or use the existing provider.
+        credentialsProvider = new CognitoCachingCredentialsProvider(context, getApplicationContext().getString(R.string.cognito_identity_pool_id), CognitoHelper.getCognitoRegion());
 
-        // START: Determine if it's the user's first time opening the app, and just welcome or welcome them back accordingly
-        Boolean firstTime = isFirstTimeSharedPref.getBoolean("firstTime", true);
+        // Set up as a credentials provider.
+        Map<String, String> logins = new HashMap<String, String>();
+        logins.put(getApplicationContext().getString(R.string.cognito_login), idToken);
+        credentialsProvider.setLogins(logins);
+        // END: get AWS credentials to access AWS resources
 
-        // the user is back to using the app, welcome them back! or just welcome new user if it's their first time
-        selectWelcomeChatMessage(firstTime);
+        DynamoDBClientAndMapper dynamoDb = new DynamoDBClientAndMapper(getApplicationContext(), credentialsProvider);
+        mapper = dynamoDb.getMapper();
 
-        SharedPreferences.Editor editor = isFirstTimeSharedPref.edit();
-        editor.putBoolean("firstTime", false);
-        editor.apply();
-        // END: Determine if it's the user's first time openeing the app, and just welcome or welcome them back accordingly
+
 
     }
 
@@ -279,13 +295,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 String conversationDateTime = DateFormat.getDateTimeInstance().format(new Date());
 
                 // create chatPostId
-                String conversationId = UUID.randomUUID().toString();
+                String conversationId = createUniqueId();
                 // add the conversation to conversation table
                 UserConversation conversation = new UserConversation();
                 conversation.setConversationId(conversationId);
                 conversation.setConversationDateTime(conversationDateTime);
 
-                conversation.setUserId(activityReference.get().uniqueId);
+                //conversation.setUserId(activityReference.get().uniqueId);
+
+                // username is uuid geneated by aws cognito that is mapped to user's email and pass
+                conversation.setUserId(CognitoHelper.getCurrSession().getUsername());
+
 
                 // create chatpost list of strings to push to NoSql db
                 ArrayList<String> tempChatPostsStringList = new ArrayList<String>();
@@ -297,6 +317,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 // END: add conversation to User-Conversations Table
 
                 // START: add conversationId to this User in the User Table
+                /*
                 // (User has many conversations: @One To Many)
 
                 HashSet<String> conversationIds; // to obtain stored conversations ids
@@ -318,11 +339,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 selectedUser.setConversationIds(conversationIds);
 
-
+                */
                 // END: add conversationId to this User in the User Table
 
                 // save user with the updated conversationId
-                activityReference.get().mapper.save(selectedUser);
+                // activityReference.get().mapper.save(selectedUser);
+
                 // save conversation
                 activityReference.get().mapper.save(conversation);
 
@@ -367,6 +389,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Toast.makeText(activityReference.get().getApplicationContext(),
                     "Internal error occurred communicating with DynamoDB\n" + "Error Message:  " + ace.getMessage(),
                     Toast.LENGTH_LONG).show();
+        }
+
+        private String createUniqueId() {
+            // returns: 10/23/17 8:22AM
+            String currentDateTimeString = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.US).format(new Date());
+
+            // format to 102317822AM
+            currentDateTimeString = currentDateTimeString.replace("/", "").replace(" ", "").replace(":", "");
+
+            // uuid + datetime
+            String id = UUID.randomUUID().toString() + currentDateTimeString;
+
+            return id;
         }
     }
 
@@ -491,14 +526,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             deleteAllChatPostsViewModel.deleteAllChatPosts();
 
             // RecyclerView is cleared since we are obesrving livedata
-            // clear RecyclerView
-            // mMessageAdapter.clearMessages();
-            // mMessageAdapter.notifyDataSetChanged();
-
-            // select welcome message to add
-            //selectWelcomeChatMessage();
-
-
 
             return true;
         }
@@ -528,7 +555,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             mMessageAdapter.add(chatMessage); // display in RecyclerView while waiting for response
             // END: quickly display userQuery in RecyclerView
 
-            // START: check to see if conversation is already 5*2=10 messages long, if yes push the messages and mark as pushed
+            // START: check to see if conversation has already at least 5*2=10 messages, if yes push the messages and mark as pushed
             if(allLocalNotInRemoteChatPosts.size() >= 5) {
                 // push them back to remoteDb.
                 // then set pushedToRemoteDb value of each retrieved chatPost to true and run update transaction
@@ -539,7 +566,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     new TaskAddChatPostsToRemoteDb(this, allLocalNotInRemoteChatPosts).execute();
                 }
             }
-            // END: check to see if conversation is already 5*2=10 messages long, if yes push the messages and mark as pushed
+            // END: check to see if conversation has already at least 5*2=10 messages, if yes push the messages and mark as pushed
 
             // START: send userQuery to dialogFlow API, once obtain response: add to RecyclerView, add chatPost to local Room db
             // pass params
