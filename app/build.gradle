@@ -85,6 +85,8 @@ dependencies {
     compile 'com.amazonaws:aws-android-sdk-ddb:2.2.22'
     compile 'com.amazonaws:aws-android-sdk-ddb-mapper:2.2.22'
 
+    compile 'com.amazonaws:aws-android-sdk-cognitoidentityprovider:2.6.8'
+
 
 
 }
