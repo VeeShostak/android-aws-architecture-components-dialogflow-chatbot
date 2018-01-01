@@ -9,12 +9,34 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoDevice;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUser;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserAttributes;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserCodeDeliveryDetails;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserDetails;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserSession;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.AuthenticationContinuation;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.AuthenticationDetails;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.ChallengeContinuation;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.ChooseMfaContinuation;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.MultiFactorAuthenticationContinuation;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.NewPasswordContinuation;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.AuthenticationHandler;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.GetDetailsHandler;
+import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.SignUpHandler;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
 
 
 import java.io.File;
+import java.text.DateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 
+import io.github.veeshostak.aichat.aws.cognito.CognitoHelper;
 import io.github.veeshostak.aichat.aws.dynamodb.DynamoDBClientAndMapper;
 import io.github.veeshostak.aichat.utils.Installation;
 import io.github.veeshostak.aichat.R;
@@ -25,18 +47,19 @@ public class SignInActivity extends AppCompatActivity implements View.OnClickLis
 
     private static final String TAG = "SignInActivity"; // for logcat
 
-    private EditText mFirstNameField;
-    private EditText mLastNameField;
+    private EditText mNameField;
     private EditText mEmailField;
+    private EditText mPasswordField;
+
     private TextView mTermOfServiceLink;
     private Button mSignUpButton;
+    private Button mSignInButton;
 
-    private DynamoDBMapper mapper;
+    //private String uniqueId;
 
-    private String uniqueId;
-
-    private String fullName;
     private String email;
+    private String name;
+
 
 
 
@@ -48,97 +71,37 @@ public class SignInActivity extends AppCompatActivity implements View.OnClickLis
 
         initControls();
 
-        // Authenticate
-        // check if file exists (user created), if yes, then obtain ID
-        // if not, create and get id
+        CognitoHelper.init(getApplicationContext());
 
-        File installation = new File(getApplicationContext().getFilesDir(), "INSTALLATION");
-        try {
-            if (installation.exists()) {
-                // if file exists, then uniqueId exists, proceed to application
-
-                //Log.d(TAG, "SignInAcitvity: " + "ID: " + uniqueId + "\n");
-
-                // pass along userID to main activity
-                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                intent.putExtra("UNIQUE_ID", uniqueId);
-                startActivity(intent);
-
-                // Go to MainActivity
-                startActivity(new Intent(SignInActivity.this, MainActivity.class));
-                finish(); // exit, remove current activity
-            }
-
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
+        // check if user is still authenticated (token still valid)
+        // if yes sign them in automatically and go to MainActivity
+        findCurrent();
 
     }
 
     private void initControls() {
-        mFirstNameField = (EditText) findViewById(R.id.firstNameField);
-        mLastNameField = (EditText) findViewById(R.id.lastNameField);
+
+        mNameField = (EditText) findViewById(R.id.nameField);
         mEmailField = (EditText) findViewById(R.id.emailField);
+        mPasswordField = (EditText) findViewById(R.id.passwordField);
+
         mTermOfServiceLink = (TextView) findViewById(R.id.termsLink);
         mSignUpButton = (Button) findViewById(R.id.signUpButton);
+        mSignInButton = (Button) findViewById(R.id.signInButton);
 
         // listeners
         mSignUpButton.setOnClickListener(this);
+        mSignInButton.setOnClickListener(this);
         mTermOfServiceLink.setOnClickListener(this);
 
-        DynamoDBClientAndMapper dynamoDb = new DynamoDBClientAndMapper(getApplicationContext());
-        mapper = dynamoDb.getMapper();
     }
 
-
-    private void setUserInDb() {
-        final AsyncTask<String, Void, Void> taskUpdateDb = new AsyncTask<String, Void, Void>() {
-
-
-            @Override
-            protected Void doInBackground(final String... params) {
-
-                String signUpDateTime = String.valueOf(System.currentTimeMillis() / 100); // get seconds
-
-                // push back uID, first name, last name, email, and empty conversaton list
-
-                User user = new User();
-                user.setUserId(uniqueId);
-                user.setSignUpDateTime(signUpDateTime); // todo: use AWS Lambda to set dt
-
-                user.setFullName(fullName);
-                user.setEmail(email);
-                //user.setConversationIds(new HashSet<String>());
-
-                mapper.save(user);
-
-                return null;
-
-
-            }
-
-            @Override
-            protected void onPostExecute(Void err) {
-                if (err != null) {
-                    //onResult(response);
-
-                } else {
-                    //onError(dbError);
-                }
-            }
-        };
-
-        // EXECUTE
-        taskUpdateDb.execute();
-    }
-
-
-    public final static boolean isValidEmail(CharSequence target) {
-        if (TextUtils.isEmpty(target)) {
-            return false;
-        } else {
-            return android.util.Patterns.EMAIL_ADDRESS.matcher(target).matches();
+    private void findCurrent() {
+        CognitoUser user = CognitoHelper.getUserPool().getCurrentUser();
+        email = user.getUserId();
+        if(email != null) {
+            CognitoHelper.setUser(email);
+            user.getSessionInBackground(authenticationHandler);
         }
     }
 
@@ -154,35 +117,217 @@ public class SignInActivity extends AppCompatActivity implements View.OnClickLis
                 return;
             }
 
-            String firstName = mFirstNameField.getText().toString();
-            if (firstName.length() < 1) {
-                mEmailField.setError("Please enter a first name");
+            name = mNameField.getText().toString();
+            if (name.isEmpty()) {
+                mNameField.setError("Please enter a name");
                 return;
             }
 
-            String lastName = mLastNameField.getText().toString();
-            if (lastName.length() < 1) {
-                mEmailField.setError("Please enter a last name");
+            // Dont need to set user in db, since we can access user analytics in Cognito
+            //setUserInDb(name, email);
+
+            // Create a CognitoUserAttributes object and add user attributes
+            CognitoUserAttributes userAttributes = new CognitoUserAttributes();
+
+            // Add the user attributes. Attributes are added as key-value pairs
+            // Adding user's given name.
+            // Note that the key is "name" which is the OIDC claim for name
+            userAttributes.addAttribute("name", name);
+
+            // Adding user's email
+            userAttributes.addAttribute("email", email);
+
+            // create a unique userId. // email is passed, id is created on server
+            //uniqueId = createUniqueId();
+
+            // call the sign-up api.
+            CognitoHelper.getUserPool().signUpInBackground(email, mPasswordField.getText().toString(), userAttributes, null, signupCallback);
+
+            // after sign up, user confirms their email. then they can sign in
+
+        } else if (i == R.id.signInButton) {
+
+
+            email = mEmailField.getText().toString();
+            if (!isValidEmail(email)) {
+                mEmailField.setError("Please enter a valid email");
                 return;
             }
 
-            fullName = firstName + " " + lastName;
+            name = mNameField.getText().toString();
+            if (name.isEmpty()) {
+                mNameField.setError("Please enter a name");
+                return;
+            }
 
-            // get id (either retrieve existing, or create)
-            Installation GetId = new Installation();
-            uniqueId = GetId.id(getApplicationContext());
-
-
-            // push back uID, first name, last name, email, and empty conversaton list
-            setUserInDb();
-
-            // Go to MainActivity
-            startActivity(new Intent(SignInActivity.this, MainActivity.class));
-            finish(); // exit, remove current activity
+            // Sign in the user
+            CognitoHelper.getUserPool().getUser(email).getSessionInBackground(authenticationHandler);
 
         } else if (i == R.id.termsLink) {
             startActivity(new Intent(SignInActivity.this, TermsOfService.class));
         }
+    }
+
+    public void signInSuccess() {
+
+        // Fetch the user details
+        CognitoHelper.getUserPool().getUser(email).getDetailsInBackground(getDetailsHandler);
 
     }
+
+    // ==================
+    // START: Callbacks
+    // ==================
+
+    // Callback handler for the sign-in process
+    AuthenticationHandler authenticationHandler = new AuthenticationHandler() {
+
+        @Override
+        public void onSuccess(CognitoUserSession cognitoUserSession, CognitoDevice cognitoDevice) {
+            // Sign-in was successful, cognitoUserSession will contain tokens for the user
+
+            CognitoHelper.setCurrSession(cognitoUserSession);
+
+
+            signInSuccess();
+        }
+
+        @Override
+        public void getAuthenticationDetails(AuthenticationContinuation authenticationContinuation, String userId) {
+            // The API needs user sign-in credentials to continue
+            AuthenticationDetails authenticationDetails = new AuthenticationDetails(userId, mPasswordField.getText().toString(), null);
+
+            // Pass the user sign-in credentials to the continuation
+            authenticationContinuation.setAuthenticationDetails(authenticationDetails);
+
+            // Allow the sign-in to continue
+            authenticationContinuation.continueTask();
+        }
+
+
+        @Override
+        public void getMFACode(MultiFactorAuthenticationContinuation multiFactorAuthenticationContinuation) {
+            // Multi-factor authentication is required; get the verification code from user
+            multiFactorAuthenticationContinuation.setMfaCode("123");
+            // Allow the sign-in process to continue
+            multiFactorAuthenticationContinuation.continueTask();
+        }
+
+
+        @Override
+        public void onFailure(Exception exception) {
+            // Sign-in failed, check exception for the cause
+            Toast.makeText(getApplicationContext(),
+                    "error: " + exception.getMessage(),
+                    Toast.LENGTH_SHORT).show();
+        }
+
+        @Override
+        public void authenticationChallenge(ChallengeContinuation continuation) {
+            /**
+             * For Custom authentication challenge, implement your logic to present challenge to the
+             * user and pass the user's responses to the continuation.
+             */
+            if ("NEW_PASSWORD_REQUIRED".equals(continuation.getChallengeName())) {
+                // This is the first sign-in attempt for an admin created user
+//                        newPasswordContinuation = (NewPasswordContinuation) continuation;
+//                        AppHelper.setUserAttributeForDisplayFirstLogIn(newPasswordContinuation.getCurrentUserAttributes(),
+//                                newPasswordContinuation.getRequiredAttributes());
+//                        closeWaitDialog();
+//                        firstTimeSignIn();
+            } else if ("SELECT_MFA_TYPE".equals(continuation.getChallengeName())) {
+//                        closeWaitDialog();
+//                        mfaOptionsContinuation = (ChooseMfaContinuation) continuation;
+//                        List<String> mfaOptions = mfaOptionsContinuation.getMfaOptions();
+//                        selectMfaToSignIn(mfaOptions, continuation.getParameters());
+            }
+        }
+    };
+
+    // ===
+
+    // Create a callback handler for sign-up. The onSuccess method is called when the sign-up is successful.
+    SignUpHandler signupCallback = new SignUpHandler() {
+
+        @Override
+        public void onSuccess(CognitoUser cognitoUser, boolean userConfirmed, CognitoUserCodeDeliveryDetails cognitoUserCodeDeliveryDetails) {
+            // Sign-up was successful
+
+            // Check if this user (cognitoUser) needs to be confirmed
+            if(!userConfirmed) {
+                // This user must be confirmed and a confirmation link was sent to the user
+                // cognitoUserCodeDeliveryDetails will indicate where the confirmation code was sent
+                // Get the confirmation code from user if using confirmation code. else th user confirms an email link
+                Toast.makeText(getApplicationContext(),
+                        "Please confirm your email address " + cognitoUserCodeDeliveryDetails.getDestination(),
+                        Toast.LENGTH_LONG).show();
+            }
+            else {
+                // The user has already been confirmed
+                Toast.makeText(getApplicationContext(),
+                        "You have confirmed your email, please sign in! ",
+                        Toast.LENGTH_LONG).show();
+            }
+        }
+
+        @Override
+        public void onFailure(Exception exception) {
+            // Sign-up failed, check exception for the cause
+            Toast.makeText(getApplicationContext(),
+                    "error: " + exception.getMessage(),
+                    Toast.LENGTH_SHORT).show();
+        }
+    };
+
+    // ===
+
+    // Implement callback handler for getting details
+    GetDetailsHandler getDetailsHandler = new GetDetailsHandler() {
+        @Override
+        public void onSuccess(CognitoUserDetails cognitoUserDetails) {
+            // The user detail are in cognitoUserDetails
+
+            CognitoHelper.setUserDetails(cognitoUserDetails);
+
+            // Go to MainActivity
+            startActivity(new Intent(SignInActivity.this, MainActivity.class));
+            finish(); // exit, remove current activity
+        }
+
+        @Override
+        public void onFailure(Exception exception) {
+            // Fetch user details failed, check exception for the cause
+            Toast.makeText(getApplicationContext(),
+                    "error: " + exception.getMessage(),
+                    Toast.LENGTH_SHORT).show();
+        }
+    };
+
+    // ==================
+    // END: Callbacks
+    // ==================
+
+    public String createUniqueId() {
+        // returns: 10/23/17 8:22AM
+        String currentDateTimeString = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT, Locale.US).format(new Date());
+
+        // format to 102317822AM
+        currentDateTimeString = currentDateTimeString.replace("/", "").replace(" ", "").replace(":", "");
+
+        // uuid + datetime
+        String id = UUID.randomUUID().toString() + currentDateTimeString;
+
+        return id;
+    }
+
+    public final static boolean isValidEmail(CharSequence target) {
+        if (TextUtils.isEmpty(target)) {
+            return false;
+        } else {
+            return android.util.Patterns.EMAIL_ADDRESS.matcher(target).matches();
+        }
+    }
+
+
+
 }

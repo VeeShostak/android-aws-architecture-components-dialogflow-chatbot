@@ -4,60 +4,64 @@
     android:layout_height="match_parent">
 
 
-    <!--<TextView-->
-        <!--android:text="@string/terms"-->
-        <!--android:layout_width="wrap_content"-->
-        <!--android:layout_height="wrap_content"-->
-        <!--android:id="@+id/textTerms"-->
-        <!--android:scrollbars = "vertical"-->
-        <!--android:layout_marginLeft="3dp"-->
-        <!--android:layout_marginRight="3dp"-->
-        <!--android:gravity="top"-->
-        <!--android:layout_marginTop="87dp"-->
-        <!--android:layout_below="@+id/lastName"-->
-        <!--android:layout_alignParentStart="true" />-->
-
     <EditText
-        android:layout_width="wrap_content"
+        android:id="@+id/nameField"
+        android:layout_width="match_parent"
+
+
         android:layout_height="wrap_content"
-
-
-        android:id="@+id/firstNameField"
-        android:layout_alignParentTop="true"
         android:layout_alignParentStart="true"
-        android:layout_marginTop="25dp"
+        android:layout_alignParentTop="true"
         android:layout_marginLeft="5dp"
-        android:hint="first name" />
+        android:layout_marginTop="25dp"
+        android:hint="your name"
+        android:inputType="textPersonName" />
 
     <EditText
-        android:layout_width="wrap_content"
+
+        android:id="@+id/passwordField"
+        android:layout_width="match_parent"
+
         android:layout_height="wrap_content"
+        android:layout_alignStart="@+id/emailField"
+        android:layout_below="@+id/emailField"
+        android:layout_marginTop="5dp"
+        android:hint="your password"
 
 
-        android:id="@+id/lastNameField"
-        android:layout_marginTop="25dp"
-        android:layout_marginLeft="5dp"
-        android:layout_below="@+id/firstNameField"
-        android:hint="last name" />
+        android:inputType="textPassword" />
 
     <EditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/lastNameField"
-        android:layout_alignStart="@+id/lastNameField"
-        android:layout_marginTop="25dp"
-        android:layout_marginLeft="5dp"
         android:id="@+id/emailField"
-        android:hint="email" />
+        android:layout_width="match_parent"
+
+        android:layout_height="wrap_content"
+        android:layout_alignEnd="@+id/nameField"
+
+        android:layout_alignStart="@+id/nameField"
+        android:layout_below="@+id/nameField"
+        android:layout_marginTop="5dp"
+        android:hint="your email"
+        android:inputType="textEmailAddress" />
+
 
     <Button
-        android:text="Sign Up"
+        android:id="@+id/signUpButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/emailField"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="25dp"
-        android:id="@+id/signUpButton" />
+        android:layout_alignEnd="@+id/termsLink"
+        android:layout_alignTop="@+id/signInButton"
+        android:layout_marginEnd="30dp"
+        android:text="Sign Up" />
+
+    <Button
+        android:id="@+id/signInButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/passwordField"
+        android:layout_marginTop="51dp"
+        android:layout_toStartOf="@+id/signUpButton"
+        android:text="Sign In" />
 
     <TextView
         android:text="By signing up, you agree to the\nTerms of Service &amp; Privacy Policy\n found in the link below"
@@ -70,14 +74,14 @@
         android:textAlignment="center" />
 
     <TextView
-        android:text="Terms of Service &amp; Privacy Policy"
+        android:id="@+id/termsLink"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="25dp"
-        android:id="@+id/termsLink"
-        android:textColor="@android:color/holo_blue_dark"
         android:layout_below="@+id/termsIntro"
-        android:layout_alignStart="@+id/termsIntro"
-        android:clickable="true" />
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="26dp"
+        android:clickable="true"
+        android:text="Terms of Service &amp; Privacy Policy"
+        android:textColor="@android:color/holo_blue_dark" />
 
 </RelativeLayout>

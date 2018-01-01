@@ -24,8 +24,6 @@ public class CognitoHelper {
     private static CognitoUserPool userPool;
     private static String user;
 
-
-
     private static String userPoolId;
     private static String clientId;
     /**
@@ -36,15 +34,9 @@ public class CognitoHelper {
     private static String clientSecret;
     private static Regions cognitoRegion = Regions.US_WEST_2;
 
-
     // User details from the service
     private static CognitoUserSession currSession;
     private static CognitoUserDetails userDetails;
-
-
-
-
-
 
 
     public static void init(Context context) {
@@ -116,6 +108,15 @@ public class CognitoHelper {
 
     public static void setUser(String user) {
         CognitoHelper.user = user;
+    }
+
+
+    public static String getUserPoolId() {
+        return userPoolId;
+    }
+
+    public static Regions getCognitoRegion() {
+        return cognitoRegion;
     }
 }
 
