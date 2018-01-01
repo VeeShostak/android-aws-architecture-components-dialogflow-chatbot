@@ -1,7 +1,6 @@
 package io.github.veeshostak.aichat.activities;
 
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
@@ -20,27 +19,19 @@ import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserSession
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.AuthenticationContinuation;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.AuthenticationDetails;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.ChallengeContinuation;
-import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.ChooseMfaContinuation;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.MultiFactorAuthenticationContinuation;
-import com.amazonaws.mobileconnectors.cognitoidentityprovider.continuations.NewPasswordContinuation;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.AuthenticationHandler;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.GetDetailsHandler;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.handlers.SignUpHandler;
-import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.DynamoDBMapper;
 
 
-import java.io.File;
 import java.text.DateFormat;
 import java.util.Date;
-import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
 import io.github.veeshostak.aichat.aws.cognito.CognitoHelper;
-import io.github.veeshostak.aichat.aws.dynamodb.DynamoDBClientAndMapper;
-import io.github.veeshostak.aichat.utils.Installation;
 import io.github.veeshostak.aichat.R;
-import io.github.veeshostak.aichat.aws.dynamodb.model.User;
 
 
 public class SignInActivity extends AppCompatActivity implements View.OnClickListener {
@@ -74,7 +65,7 @@ public class SignInActivity extends AppCompatActivity implements View.OnClickLis
         CognitoHelper.init(getApplicationContext());
 
         // check if user is still authenticated (token still valid)
-        // if yes sign them in automatically and go to MainActivity
+        // if yes sign them in automatically and go to ChatListActivity
         findCurrent();
 
     }
@@ -289,8 +280,8 @@ public class SignInActivity extends AppCompatActivity implements View.OnClickLis
 
             CognitoHelper.setUserDetails(cognitoUserDetails);
 
-            // Go to MainActivity
-            startActivity(new Intent(SignInActivity.this, MainActivity.class));
+            // Go to ChatListActivity
+            startActivity(new Intent(SignInActivity.this, ChatListActivity.class));
             finish(); // exit, remove current activity
         }
 

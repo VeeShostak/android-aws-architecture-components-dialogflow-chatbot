@@ -34,7 +34,6 @@ import io.github.veeshostak.aichat.aws.dynamodb.DynamoDBClientAndMapper;
 import io.github.veeshostak.aichat.recyclerview.adapter.MessageListAdapter;
 import io.github.veeshostak.aichat.utils.Installation;
 import io.github.veeshostak.aichat.R;
-import io.github.veeshostak.aichat.aws.dynamodb.model.User;
 import io.github.veeshostak.aichat.aws.dynamodb.model.UserConversation;
 import io.github.veeshostak.aichat.viewmodels.AddChatPostsViewModel;
 import io.github.veeshostak.aichat.viewmodels.DeleteAllChatPostsViewModel;
@@ -48,7 +47,6 @@ import java.text.DateFormat;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 
 import android.support.v7.widget.LinearLayoutManager;
@@ -60,7 +58,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ShareActionProvider;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -72,13 +69,12 @@ import java.util.UUID;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.CognitoCachingCredentialsProvider;
 import com.amazonaws.mobileconnectors.cognitoidentityprovider.CognitoUserSession;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.*;
 import com.amazonaws.mobileconnectors.dynamodbv2.dynamodbmapper.*;
 
 
 // for TTS: implement AIListener
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class ChatListActivity extends AppCompatActivity implements View.OnClickListener {
 
     private static final String TAG = "ChatActivity";
     //private final int REQUEST_INTERNET = 1;
@@ -128,7 +124,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_chat);
+        setContentView(R.layout.activity_chat_list);
 
         final AIConfiguration config = new AIConfiguration(getString(R.string.dialog_dlow_client_token),
                 AIConfiguration.SupportedLanguages.English,
@@ -136,8 +132,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         /*
         // permissions for listening
-        if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_INTERNET);
+        if (ContextCompat.checkSelfPermission(ChatListActivity.this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(ChatListActivity.this, new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_INTERNET);
         }
 
         aiService = AIService.getService(this, config);
@@ -149,7 +145,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initControls();
 
         // observe all chatPosts
-        listAllChatPostsViewModel.getData().observe(MainActivity.this, new Observer<List<ChatPost>>() {
+        listAllChatPostsViewModel.getData().observe(ChatListActivity.this, new Observer<List<ChatPost>>() {
             @Override
             public void onChanged(@Nullable List<ChatPost> chatPosts) {
                 //recyclerViewAdapter.addItems(chatPost);
@@ -160,10 +156,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
 
         // observe chatPosts that are not in remote db (have not benn pushed back)
-        listNotInRemoteChatPostsViewModel.getData().observe(MainActivity.this, new Observer<List<ChatPost>>() {
+        listNotInRemoteChatPostsViewModel.getData().observe(ChatListActivity.this, new Observer<List<ChatPost>>() {
             @Override
             public void onChanged(@Nullable List<ChatPost> chatPosts) {
+
                 allLocalNotInRemoteChatPosts = new ArrayList<>(chatPosts);
+
+                if (allLocalNotInRemoteChatPosts != null && !allLocalNotInRemoteChatPosts.isEmpty()) {
+                    // START: check to see if conversation has 5*2=10 messages, if yes push the messages and mark as pushed
+                    if (allLocalNotInRemoteChatPosts.size() >= 5) {
+                        addToRemoteDbHelper();
+                    }
+                    // END: check to see if conversation has 5*2=10 messages, if yes push the messages and mark as pushed
+                }
             }
         });
 
@@ -269,15 +274,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
      will be garbage-collected.
      When the Activity stops existing, since it is hold through a WeakReference, it can be collected.
 
-     the Activity within the inner class is now referenced as WeakReference<MainActivity> mainActivity;
+     the Activity within the inner class is now referenced as WeakReference<ChatListActivity> mainActivity;
      */
     private static class TaskAddChatPostsToRemoteDb extends AsyncTask<String, Void, AmazonClientException> {
 
-        private WeakReference<MainActivity> activityReference; // weak ref to our MainActivity.java
+        private WeakReference<ChatListActivity> activityReference; // weak ref to our ChatListActivity.java
         private ArrayList<ChatPost> chatPostsToAdd;
 
         // only retain a weak reference to the activity
-        private TaskAddChatPostsToRemoteDb(MainActivity context, ArrayList<ChatPost> chatPostsToAdd) {
+        private TaskAddChatPostsToRemoteDb(ChatListActivity context, ArrayList<ChatPost> chatPostsToAdd) {
             activityReference = new WeakReference<>(context);
             this.chatPostsToAdd = new ArrayList<>(chatPostsToAdd);
         }
@@ -433,6 +438,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
+
+    public void addToRemoteDbHelper() {
+
+            // push them back to remoteDb.
+            // then set pushedToRemoteDb value of each retrieved chatPost to true and run update transaction
+            if (allLocalNotInRemoteChatPosts != null && !allLocalNotInRemoteChatPosts.isEmpty()) {
+                // update db with stored chat history, on success update local (set pushedToRemoteDb to true)
+                new TaskAddChatPostsToRemoteDb(this, allLocalNotInRemoteChatPosts).execute();
+            }
+
+    }
+
     public void selectWelcomeChatMessage(Boolean isFirstTime){
 
         Random r = new Random();
@@ -507,7 +524,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         if (id == R.id.action_terms) {
             // show terms of service
-            startActivity(new Intent(MainActivity.this, TermsOfService.class));
+            startActivity(new Intent(ChatListActivity.this, TermsOfService.class));
             return true;
         } else if (id == R.id.action_delete_chat) {
             // START: check to see if there are chatPosts that need to be pushed to RemoteDb, push them and mark as pushed
@@ -555,19 +572,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             mMessageAdapter.add(chatMessage); // display in RecyclerView while waiting for response
             // END: quickly display userQuery in RecyclerView
 
-            // START: check to see if conversation has already at least 5*2=10 messages, if yes push the messages and mark as pushed
-            if(allLocalNotInRemoteChatPosts.size() >= 5) {
-                // push them back to remoteDb.
-                // then set pushedToRemoteDb value of each retrieved chatPost to true and run update transaction
-
-                //ArrayList<ChatPost> chatPostsToPush = new ArrayList<ChatPost>(listNotInRemoteChatPostsViewModel.getAllChatPostsNotInRemoteDb());
-                if (allLocalNotInRemoteChatPosts != null && !allLocalNotInRemoteChatPosts.isEmpty()) {
-                    // update db with stored chat history, on success update local (set pushedToRemoteDb to true)
-                    new TaskAddChatPostsToRemoteDb(this, allLocalNotInRemoteChatPosts).execute();
-                }
-            }
-            // END: check to see if conversation has already at least 5*2=10 messages, if yes push the messages and mark as pushed
-
             // START: send userQuery to dialogFlow API, once obtain response: add to RecyclerView, add chatPost to local Room db
             // pass params
             final String eventString = null;
@@ -613,12 +617,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     */
     private static class TaskSendUserQueryToDialogFlow extends AsyncTask<String, Void, AIResponse> {
 
-        private WeakReference<MainActivity> activityReference; // weak ref to our MainActivity.java
+        private WeakReference<ChatListActivity> activityReference; // weak ref to our ChatListActivity.java
         private String userQuery;
         private AIError aiError;
 
-        private TaskSendUserQueryToDialogFlow(MainActivity context, String userQuery) {
-            activityReference = new WeakReference<MainActivity>(context);
+        private TaskSendUserQueryToDialogFlow(ChatListActivity context, String userQuery) {
+            activityReference = new WeakReference<ChatListActivity>(context);
             this.userQuery = userQuery;
         }
 

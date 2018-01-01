@@ -20,7 +20,7 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".activities.MainActivity"
+        <activity android:name=".activities.ChatListActivity"
             android:screenOrientation="portrait" />
 
         <activity android:name=".activities.TermsOfService" />
