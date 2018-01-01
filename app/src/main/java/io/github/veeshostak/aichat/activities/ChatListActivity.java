@@ -572,6 +572,10 @@ public class ChatListActivity extends AppCompatActivity implements View.OnClickL
             mMessageAdapter.add(chatMessage); // display in RecyclerView while waiting for response
             // END: quickly display userQuery in RecyclerView
 
+
+            // disable send button until retrieve success of failure from API
+            sendBtn.setClickable(false);
+
             // START: send userQuery to dialogFlow API, once obtain response: add to RecyclerView, add chatPost to local Room db
             // pass params
             final String eventString = null;
@@ -673,6 +677,8 @@ public class ChatListActivity extends AppCompatActivity implements View.OnClickL
             //resultTextView.setText(gson.toJson(response));
             Log.i(TAG, "Received success response");
 
+            activityReference.get().sendBtn.setClickable(true); // enable button
+
             // get speech from the result object
             final Result result = response.getResult();
             final String speech = result.getFulfillment().getSpeech();
@@ -688,12 +694,12 @@ public class ChatListActivity extends AppCompatActivity implements View.OnClickL
             mChatPost.setCreatedAt(DateFormat.getDateTimeInstance().format(new Date()));
             activityReference.get().addChatPostsViewModel.addChatPosts(mChatPost);
 
-
-
         }
 
         private void onError(final AIError error) {
             Log.d(TAG, error.toString());
+            activityReference.get().sendBtn.setClickable(true); // enable button
+
             Toast.makeText(activityReference.get().getApplicationContext(), error.toString(), Toast.LENGTH_LONG).show();
             //resultTextView.setText(error.toString());
         }
